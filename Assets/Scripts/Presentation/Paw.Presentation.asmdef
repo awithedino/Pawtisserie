@@ -1,0 +1,6 @@
+{
+    "name": "Paw.Presentation",
+    "rootNamespace": "Paw.Presentation",
+    "references": ["Paw.Sim"],
+    "noEngineReferences": true
+}

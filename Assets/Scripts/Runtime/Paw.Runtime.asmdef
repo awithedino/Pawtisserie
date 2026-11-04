@@ -1,0 +1,5 @@
+{
+    "name": "Paw.Runtime",
+    "rootNamespace": "Paw.Runtime",
+    "references": ["Paw.Sim", "Paw.Presentation", "UnityEngine.UI"]
+}

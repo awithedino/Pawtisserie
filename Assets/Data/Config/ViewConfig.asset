@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4a6c31a3c7566543b0edc1f77bc99fe, type: 3}
+  m_Name: ViewConfig
+  m_EditorClassIdentifier: 
+  boardWidth: 400
+  boardHeight: 800
+  cellSize: 50
+  pastrySize: 34
+  arcHeight: 45
+  poolSize: 60
+  tapLanding: 0.32
+  pounceLanding: 0.45
+  flopLanding: 0.36
+  gravityTravel: 0.25
+  panelDelay: 0.7
+  compactionTime: 0.18
+  startingShuffle: 2
+  startingCallBox: 2
+  startingStash: 1
+  pastryColors:
+  - {r: 1, g: 0.494, b: 0.69, a: 1}
+  - {r: 0.416, g: 0.659, b: 0.941, a: 1}
+  - {r: 0.31, g: 0.78, b: 0.604, a: 1}
+  - {r: 0.949, g: 0.663, b: 0.231, a: 1}
+  cardColors:
+  - {r: 1, g: 0.494, b: 0.69, a: 1}
+  - {r: 0.949, g: 0.651, b: 0.353, a: 1}
+  - {r: 0.31, g: 0.722, b: 0.788, a: 1}
+  - {r: 0.965, g: 0.769, b: 0.325, a: 1}
