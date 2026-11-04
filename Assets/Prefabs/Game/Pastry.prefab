@@ -101,11 +101,20 @@ MonoBehaviour:
   body: {fileID: 4265180592420069885}
   cover: {fileID: 6504906135455441024}
   pastrySprites:
-  - {fileID: -2413806693520163455, guid: c68a7d59584142a40a8bd5ced399bfc0, type: 3}
-  - {fileID: -9095717837082945937, guid: 49a4c10f2506df5439333bbe685d67bf, type: 3}
-  - {fileID: 7482667652216324306, guid: 120be66cf16a1e44e872ea5f1e249929, type: 3}
-  - {fileID: 2747690628134850419, guid: 845c465677afd6e44842bbbc2bf97ce3, type: 3}
-  canSprite: {fileID: 7482667652216324306, guid: f9ed82d34feb56b4098a88551a2eb8c6, type: 3}
+  - {fileID: 21300000, guid: 2e45f810f4c35784c8153e5d70113625, type: 3}
+  - {fileID: 21300000, guid: 14f2b0a04e8c05b4b961af381f299142, type: 3}
+  - {fileID: 21300000, guid: 56df8537be22aaf4dbca779956f26b14, type: 3}
+  - {fileID: 21300000, guid: 9d02ac50b58c7504887c97566ff7b00f, type: 3}
+  flatSprites:
+  - {fileID: 21300000, guid: 8e9cabee64bc8664c8d91cda65eb1362, type: 3}
+  - {fileID: 21300000, guid: 3b6d4edf405bb004caabea056baf1a24, type: 3}
+  - {fileID: 21300000, guid: c2c0725d31099614bbae28112c50ee8e, type: 3}
+  - {fileID: 21300000, guid: a2f5dd5b4db3f9a488425cbd6560f99b, type: 3}
+  useSpriteArtwork: 1
+  artworkScale: 1.5
+  stashScale: 0.5
+  canSprite: {fileID: 21300000, guid: 72b7d0ca90da53946a508115c52d7a6f, type: 3}
+  primedCanSprite: {fileID: 21300000, guid: 19ec6880c20153441940df11a0fa62da, type: 3}
   macaronRotation: 90
   canColor: {r: 0.92, g: 0.91, b: 0.87, a: 1}
   expressBounce: 0.12
@@ -183,7 +192,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 20
-  m_Sprite: {fileID: -2413806693520163455, guid: c68a7d59584142a40a8bd5ced399bfc0, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 8b197217e8a16d94e8556f46dfd2773c, type: 3}
   m_Color: {r: 0.68, g: 0.84, b: 0.95, a: 0.55}
   m_FlipX: 0
   m_FlipY: 0

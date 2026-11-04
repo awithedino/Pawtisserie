@@ -13,9 +13,20 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Box body renderer.")] private SpriteRenderer body;
         [SerializeField, Tooltip("Pastry type marker renderer.")] private SpriteRenderer marker;
         [SerializeField, Tooltip("Type sprites matching pastry IDs.")] private Sprite[] typeSprites;
+        [SerializeField, Tooltip("Pre-coloured open box backgrounds by pastry type.")] private Sprite[] boxArtwork;
+        [SerializeField, Tooltip("Pre-coloured closed boxes by pastry type.")] private Sprite[] closedArtwork;
+        [SerializeField, Tooltip("Simple lid for partially resized boxes.")] private Sprite partialLidSprite;
+        [SerializeField, Tooltip("Scale of the simple lid for partially resized boxes.")] private Vector3 partialLidScale = new Vector3(43, 4, 1);
+        [SerializeField, Tooltip("Position of the simple lid for partially resized boxes.")] private Vector3 partialLidPosition = new Vector3(0, 28, 0);
+        [SerializeField, Tooltip("Queue box artwork by pastry type.")] private Sprite[] queueArtwork;
+        [SerializeField, Tooltip("Empty capacity markers by pastry type.")] private Sprite[] ghostArtwork;
+        [SerializeField, Tooltip("Filled capacity markers by pastry type.")] private Sprite[] filledArtwork;
+        [SerializeField, Tooltip("Use small queue artwork instead of a full lane box.")] private bool miniature;
         [SerializeField, Tooltip("Rotation of the capsule type marker in degrees.")] private float macaronRotation = 90;
         [SerializeField, Tooltip("Three capacity markers.")] private SpriteRenderer[] spots;
         [SerializeField, Tooltip("Gift tag.")] private GameObject giftTag;
+        [SerializeField, Tooltip("Pre-coloured gift tag renderer.")] private SpriteRenderer giftArtwork;
+        [SerializeField, Tooltip("Gift tag sprites in card ID order.")] private Sprite[] giftSprites;
         [SerializeField, Tooltip("Closing lid renderer, with authored size.")] private SpriteRenderer lid;
         [SerializeField, Tooltip("Arrival offset in logical units.")] private Vector3 arrivalOffset = new Vector3(0, 110, 0);
         [SerializeField, Tooltip("Departure offset in logical units.")] private Vector3 departureOffset = new Vector3(0, 140, 0);
@@ -27,7 +38,11 @@ namespace Paw.Runtime
         private int reserved;
         private int filled;
         private int need;
+        private bool artwork;
         private Vector3 lidSize;
+        private Vector3 lidPosition;
+        private Vector3 closingLidSize;
+        private Color lidTint;
         private bool lidSizeCached;
         private Vector3 visualScale;
         private bool visualScaleCached;
@@ -43,14 +58,17 @@ namespace Paw.Runtime
             moving = false; visual.localPosition = Vector3.zero;
             if (!visualScaleCached) { visualScale = visual.localScale; visualScaleCached = true; }
             visual.DOKill(); visual.localScale = visualScale;
-            if (!lidSizeCached) { lidSize = lid.transform.localScale; lidSizeCached = true; }
-            closing = false; lid.enabled = false; lid.transform.localScale = lidSize;
+            if (!lidSizeCached) { lidSize = lid.transform.localScale; lidPosition = lid.transform.localPosition; lidSizeCached = true; }
+            closing = false; lid.enabled = false; lid.transform.localScale = lidSize; lid.transform.localPosition = lidPosition;
             Id = box.Id; Type = box.Type; need = box.Need; filled = box.Filled; reserved = box.Reserved;
-            body.color = Color.Lerp(config.PastryColor(Type), Color.white, .62f);
-            marker.sprite = typeSprites[Type]; marker.color = config.PastryColor(Type);
+            artwork = boxArtwork != null && boxArtwork.Length == 4 && boxArtwork[Type] != null;
+            body.sprite = artwork ? miniature && queueArtwork != null && queueArtwork.Length == 4 ? queueArtwork[Type] : boxArtwork[Type] : body.sprite;
+            body.color = artwork ? Color.white : Color.Lerp(config.PastryColor(Type), Color.white, .62f);
+            lidTint = config.PastryColor(Type);
+            marker.sprite = typeSprites[Type]; marker.color = config.PastryColor(Type); marker.enabled = !artwork;
             Vector2 bounds = marker.sprite.bounds.size; marker.transform.localScale = Vector3.one * (19 / Mathf.Max(bounds.x, bounds.y));
             marker.transform.localRotation = Quaternion.Euler(0, 0, Type == 1 ? macaronRotation : 0);
-            giftTag.SetActive(box.Gift.HasValue); visual.gameObject.SetActive(true); Paint();
+            SetGift(box.Gift); visual.gameObject.SetActive(true); Paint();
         }
         public void Hide() { Id = 0; moving = false; visual.DOKill(); if (visualScaleCached) visual.localScale = visualScale; visual.gameObject.SetActive(false); }
         public void Pulse(bool reducedMotion)
@@ -68,8 +86,21 @@ namespace Paw.Runtime
         }
         public void Land() { filled++; Paint(); }
         public void SetNeed(int value) { need = value; Paint(); }
-        public void SetGift(bool value) => giftTag.SetActive(value);
-        public void Close(long start, long end) { closeStart = start; closeEnd = end; closing = true; lid.enabled = true; }
+        public void SetGift(CardKind? value)
+        {
+            giftTag.SetActive(value.HasValue);
+            if (value.HasValue && giftArtwork != null && giftSprites != null && giftSprites.Length == 4)
+            { giftArtwork.sprite = giftSprites[(int)value.Value]; giftArtwork.color = Color.white; }
+        }
+        public void Close(long start, long end)
+        {
+            closeStart = start; closeEnd = end; closing = true; closingLidSize = lidSize;
+            if (artwork && need < Rules.BoxCapacity && partialLidSprite != null)
+            { lid.sprite = partialLidSprite; lid.transform.localPosition = partialLidPosition; closingLidSize = partialLidScale; lid.color = lidTint; }
+            else if (artwork && closedArtwork != null && closedArtwork.Length == 4)
+            { lid.sprite = closedArtwork[Type]; lid.color = Color.white; }
+            lid.enabled = !miniature;
+        }
         public void Arrive(long start, long end)
         {
             visual.localPosition = arrivalOffset;
@@ -91,14 +122,19 @@ namespace Paw.Runtime
             if (closing)
             {
                 float t = closeEnd == closeStart ? 1 : Mathf.Clamp01((float)(time - closeStart) / (closeEnd - closeStart));
-                lid.transform.localScale = new Vector3(lidSize.x, lidSize.y * t, lidSize.z);
+                lid.transform.localScale = new Vector3(closingLidSize.x, closingLidSize.y * t, closingLidSize.z);
                 if (t >= 1) closing = false;
             }
         }
         private void Paint()
         {
             for (int i = 0; i < spots.Length; i++)
-            { spots[i].enabled = i < need; spots[i].color = i < filled ? filledColor : new Color(1, 1, 1, .6f); }
+            {
+                spots[i].enabled = !miniature && i < need;
+                if (artwork && ghostArtwork != null && ghostArtwork.Length == 4 && filledArtwork != null && filledArtwork.Length == 4)
+                { spots[i].sprite = i < filled ? filledArtwork[Type] : ghostArtwork[Type]; spots[i].color = Color.white; }
+                else spots[i].color = i < filled ? filledColor : new Color(1, 1, 1, .6f);
+            }
         }
     }
 }

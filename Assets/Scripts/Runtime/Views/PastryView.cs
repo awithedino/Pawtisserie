@@ -11,7 +11,12 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Main pastry or can renderer.")] private SpriteRenderer body;
         [SerializeField, Tooltip("Cloche cover renderer.")] private SpriteRenderer cover;
         [SerializeField, Tooltip("Sprites for the four pastry IDs.")] private Sprite[] pastrySprites;
+        [SerializeField, Tooltip("Flat versions of the pastry art for flight and storage.")] private Sprite[] flatSprites;
+        [SerializeField, Tooltip("Use pre-coloured placeholder artwork.")] private bool useSpriteArtwork;
+        [SerializeField, Tooltip("Visual size multiplier for the padded placeholder art."), Min(0.1f)] private float artworkScale = 1.5f;
+        [SerializeField, Tooltip("Pastry size multiplier while it is in the stash."), Range(0.1f, 1)] private float stashScale = .5f;
         [SerializeField, Tooltip("Cream can sprite.")] private Sprite canSprite;
+        [SerializeField, Tooltip("Primed cream can sprite.")] private Sprite primedCanSprite;
         [SerializeField, Tooltip("Rotation of the capsule pastry sprite in degrees.")] private float macaronRotation = 90;
         [SerializeField, Tooltip("Cream can tint.")] private Color canColor = new Color(.92f, .91f, .87f);
         [SerializeField, Tooltip("Express landing bounce size."), Min(0)] private float expressBounce = .12f;
@@ -30,18 +35,19 @@ namespace Paw.Runtime
             if (!IsConfigured) throw new InvalidOperationException("PastryView: body, cover and all sprite references are required.");
             Id = id; Type = type; moving = false; primed = false;
             body.sprite = type < 0 ? canSprite : pastrySprites[type];
-            color = type < 0 ? canColor : config.PastryColor(type); body.color = color;
+            color = useSpriteArtwork ? Color.white : type < 0 ? canColor : config.PastryColor(type); body.color = color;
             transform.localPosition = position; transform.localScale = Vector3.one;
             Vector2 size = body.sprite.bounds.size;
             float largest = Mathf.Max(size.x, size.y);
-            body.transform.localScale = Vector3.one * (config.PastrySize / largest);
+            body.transform.localScale = Vector3.one * (config.PastrySize / largest) * (useSpriteArtwork ? artworkScale : 1);
             bodyScale = body.transform.localScale;
-            body.transform.localRotation = Quaternion.Euler(0, 0, type == 1 ? macaronRotation : 0);
+            body.transform.localRotation = Quaternion.Euler(0, 0, !useSpriteArtwork && type == 1 ? macaronRotation : 0);
             cover.transform.localScale = new Vector3(largest * 1.15f / cover.sprite.bounds.size.x, largest * 1.15f / cover.sprite.bounds.size.y, 1);
             cover.enabled = cloche; body.sortingOrder = 10; gameObject.SetActive(true);
         }
         public void SetCloche(bool value) => cover.enabled = value;
-        public void Prime() => primed = true;
+        public void SetStashed(bool value) { if (body != null) body.transform.localScale = bodyScale * (value ? stashScale : 1); }
+        public void Prime() { primed = true; if (useSpriteArtwork && Type < 0 && primedCanSprite != null) body.sprite = primedCanSprite; }
         public Vector3 PositionAt(long time)
         {
             if (!moving) return transform.localPosition;
@@ -49,6 +55,7 @@ namespace Paw.Runtime
         }
         public void Move(Vector3 target, long start, long end, float arc)
         {
+            if (useSpriteArtwork && Type >= 0 && flatSprites != null && Type < flatSprites.Length && flatSprites[Type] != null) body.sprite = flatSprites[Type];
             Vector3 from = PositionAt(start);
             motion = new FlightPath(new Point2(from.x, from.y), new Point2(target.x, target.y), start, end, arc);
             moving = true; body.sortingOrder = arc == 0 ? 10 : 30;
@@ -56,7 +63,9 @@ namespace Paw.Runtime
         public void Evaluate(long time)
         {
             if (moving) { transform.localPosition = PositionAt(time); if (time >= motion.EndTime) moving = false; }
-            if (primed) body.color = Color.Lerp(color, Color.white, .5f + .5f * Mathf.Sin(time * .00003f));
+            if (primed && useSpriteArtwork && Type < 0 && primedCanSprite != null)
+                body.sprite = Mathf.Sin(time * .00003f) >= 0 ? primedCanSprite : canSprite;
+            else if (primed && !useSpriteArtwork) body.color = Color.Lerp(color, Color.white, .5f + .5f * Mathf.Sin(time * .00003f));
         }
         public void FinishExpress(long time, bool reducedMotion)
         {

@@ -25,6 +25,8 @@ The owner requested six visual groups: `TopBar` (level and restart), `CounterRow
 
 Within those zones, `CounterRow/Lanes` groups the three lanes and awning, and `CounterRow/Queue` groups the queue boxes and NEXT canvas. `ShelfRack/Plates` groups the plates, stash and SHELF canvas; `ShelfRack/Rack` groups the rack anchors, artwork and overflow anchor. `HandRoot/Cards` groups the five cards while the deck remains alongside it. Those subgroup parents have neutral transforms; the card fan is still animated by `HandView` rather than a Layout Group. For WP04 the owner approved `BoardRoot` scale 0.8 and y +15 to fit the 7×7 tray above the booster bar. `BoostersRoot` now nests `BoosterBar`, and `BoardRoot` nests the Express collector and floating feedback.
 
+The HTML placeholder integration adds `CounterBackdrop` under Lanes, `QueueBackdrop` under Queue, `ShelfBackdrop` under Plates, `RackClosed` under Rack and a sliced `TrayFrame` under BoardRoot. The `AimOverlay` prefab is pooled under BoardRoot at runtime. Existing gameplay scene instances and serialized controller references were preserved; see `TECHNICAL-KNOWLEDGE.md` §8 for the sprite mappings and scale.
+
 ---
 
 ## 2. Scene hierarchy (target)

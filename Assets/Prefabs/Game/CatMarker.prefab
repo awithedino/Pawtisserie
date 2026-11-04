@@ -27,7 +27,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 39.0625, y: 4.296875, z: 1}
+  m_LocalScale: {x: 22.123892, y: 20, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7059736268348009015}
@@ -73,8 +73,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 60
-  m_Sprite: {fileID: -9095717837082945937, guid: 49a4c10f2506df5439333bbe685d67bf, type: 3}
-  m_Color: {r: 0.95, g: 0.65, b: 0.35, a: 1}
+  m_Sprite: {fileID: 21300000, guid: dc99b28e3d39d864b8721fcd6e46daf9, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -111,7 +111,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 18.75, y: 18.75, z: 1}
+  m_LocalScale: {x: 66.666664, y: 67.64706, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3065016465763881004}
@@ -158,8 +158,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 60
-  m_Sprite: {fileID: -2413806693520163455, guid: c68a7d59584142a40a8bd5ced399bfc0, type: 3}
-  m_Color: {r: 1, g: 0.49, b: 0.69, a: 1}
+  m_Sprite: {fileID: 21300000, guid: f4d21a9f60c2b4046b670e664e0739a1, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -196,7 +196,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 27.34375, y: 27.34375, z: 1}
+  m_LocalScale: {x: 22.916668, y: 22, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7059736268348009015}
@@ -242,8 +242,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 60
-  m_Sprite: {fileID: -2413806693520163455, guid: c68a7d59584142a40a8bd5ced399bfc0, type: 3}
-  m_Color: {r: 0.31, g: 0.72, b: 0.79, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 533de5d58b9b3484f8bc111ff96c903b, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -279,8 +279,8 @@ Transform:
   m_GameObject: {fileID: 6974864382666807671}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.1333334, z: 0}
-  m_LocalScale: {x: 0.375, y: 0.5729167, z: 1}
+  m_LocalPosition: {x: 0, y: 0.2, z: 0}
+  m_LocalScale: {x: 0.1875, y: 0.22742477, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4330403335617626532}
@@ -326,8 +326,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 59
-  m_Sprite: {fileID: -9095717837082945937, guid: 49a4c10f2506df5439333bbe685d67bf, type: 3}
-  m_Color: {r: 1, g: 0.49, b: 0.69, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 3cb91de0ec565b04980cccbd87abfa23, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -391,6 +391,8 @@ MonoBehaviour:
   - {fileID: 3918697032235081042}
   - {fileID: 4699341600787464025}
   tapArm: {fileID: 3851476152594742367}
+  focusedCat: {fileID: 21300000, guid: 533de5d58b9b3484f8bc111ff96c903b, type: 3}
+  happyCat: {fileID: 21300000, guid: 2b062b66fd317c949a3be9113af0a380, type: 3}
   startOffsets:
   - {x: 0, y: 130, z: 0}
   - {x: 0, y: 0, z: 0}
@@ -427,7 +429,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 39.0625, y: 39.0625, z: 1}
+  m_LocalScale: {x: 64.583336, y: 62, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7059736268348009015}
@@ -473,8 +475,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 60
-  m_Sprite: {fileID: -2413806693520163455, guid: c68a7d59584142a40a8bd5ced399bfc0, type: 3}
-  m_Color: {r: 0.96, g: 0.77, b: 0.33, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 533de5d58b9b3484f8bc111ff96c903b, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0

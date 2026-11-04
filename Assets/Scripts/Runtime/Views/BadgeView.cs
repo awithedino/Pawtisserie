@@ -7,6 +7,8 @@ namespace Paw.Runtime
     public sealed class BadgeView : MonoBehaviour
     {
         [SerializeField, Tooltip("Badge glyph.")] private TextMesh label;
+        [SerializeField, Tooltip("Sprite renderer for authored badge artwork.")] private SpriteRenderer artwork;
+        [SerializeField, Tooltip("Badge sprites in preview-kind order.")] private Sprite[] artworkSprites;
         [SerializeField, Tooltip("Goes into a box (GDD §11.3 green tick).")] private Color boxColor = new Color(.15f, .55f, .3f);
         [SerializeField, Tooltip("Goes onto a plate (gold arrow).")] private Color plateColor = new Color(.75f, .48f, .08f);
         [SerializeField, Tooltip("Goes onto the rack (steel arrow).")] private Color rackColor = new Color(.3f, .4f, .5f);
@@ -15,6 +17,8 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Cream can is set off (pink dot).")] private Color canColor = new Color(.85f, .25f, .55f);
         public void Show(PreviewBadgeKind kind)
         {
+            if (artwork != null && artworkSprites != null && artworkSprites.Length == 6 && artworkSprites[(int)kind] != null)
+            { artwork.sprite = artworkSprites[(int)kind]; artwork.color = Color.white; gameObject.SetActive(true); return; }
             switch (kind)
             {
                 case PreviewBadgeKind.Box: label.text = "✓"; label.color = boxColor; break;

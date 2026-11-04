@@ -137,6 +137,7 @@ Rules for all panels
 - All pointer input goes through the uGUI `EventSystem`: cards implement the pointer interfaces; the tray has an invisible, authored raycast surface (`TrayHitArea`, an alpha-0 `Image`) so board and card gestures arrive the same way on mouse and touch [WP03 design, verified in code].
 - **Raycast Target is on only for elements that receive input.** Decorative images, labels and pills have it off; otherwise they block the tray or burn raycast time.
 - Drag threshold comes from `ViewConfig.dragThresholdDp` (10 dp), not a pixel literal [verified].
+- Temporary HTML card faces include their title and footprint; the old dynamic title/band/grid objects remain inactive while the inner card visual keeps the existing selection, fan and drag behavior. Baked text will need localizable replacements with final art.
 - Escape and Android back: cancel the selection first, close the top panel next.
 - Haptics and reduced motion are settings, not UI code: `IHapticCues` and `ViewConfig.reducedMotion` (WP03).
 

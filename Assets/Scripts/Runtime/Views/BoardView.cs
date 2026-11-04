@@ -14,6 +14,11 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Top-center tray anchor, authored on the prefab.")] private Transform trayAnchor;
         [SerializeField, Tooltip("Pastry/can view prefab.")] private PastryView pastryPrefab;
         [SerializeField, Tooltip("Tray cell renderer prefab.")] private SpriteRenderer cellPrefab;
+        [SerializeField, Tooltip("Optional alternate tray tile for a checker pattern.")] private Sprite darkCellSprite;
+        [SerializeField, Tooltip("Optional artwork overlay used for aimed cells.")] private SpriteRenderer aimPrefab;
+        [SerializeField, Tooltip("Aim overlays in card ID order.")] private Sprite[] aimSprites;
+        [SerializeField, Tooltip("Optional sliced tray frame.")] private SpriteRenderer trayFrame;
+        [SerializeField, Tooltip("Extra tray frame width and height in board units."), Min(0)] private float trayFramePadding = 14;
         [SerializeField, Tooltip("Aim badge prefab.")] private BadgeView badgePrefab;
         [SerializeField, Tooltip("Optional nested counter and queue prefab.")] private CounterRowView counterRow;
         [SerializeField, Tooltip("Optional nested shelf and rack prefab.")] private ShelfRackView shelfRack;
@@ -25,6 +30,7 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Five authored plate anchors.")] private Transform[] plateAnchors;
         [SerializeField, Tooltip("Two authored rack anchors.")] private Transform[] rackAnchors;
         [SerializeField, Tooltip("Rack visual, open during a combo or while occupied.")] private GameObject rackVisual;
+        [SerializeField, Tooltip("Optional folded rack artwork while the rack is closed.")] private GameObject rackClosed;
         [SerializeField, Tooltip("Stash visual and its anchor.")] private Transform stashAnchor;
         [SerializeField, Tooltip("Overflow anchor.")] private Transform overflowAnchor;
         [SerializeField, Tooltip("Tint of the cells the aimed move will hit.")] private Color blastColor = new Color(.96f, .77f, .33f, .85f);
@@ -32,6 +38,7 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Seconds for the empty-tile wobble."), Min(0)] private float emptyTapWobbleDuration = .2f;
         private readonly List<PastryView> pool = new List<PastryView>();
         private readonly List<SpriteRenderer> cells = new List<SpriteRenderer>();
+        private readonly List<SpriteRenderer> aimOverlays = new List<SpriteRenderer>();
         private readonly List<BadgeView> badges = new List<BadgeView>();
         private readonly Dictionary<int, PastryView> active = new Dictionary<int, PastryView>();
         private readonly Dictionary<int, BoxState> boxes = new Dictionary<int, BoxState>();
@@ -60,15 +67,25 @@ namespace Paw.Runtime
             config = settings; Clear();
             while (pool.Count < config.PoolSize) { var view = Instantiate(pastryPrefab, worldLayer); view.gameObject.SetActive(false); pool.Add(view); }
             while (cells.Count < 49) { var cell = Instantiate(cellPrefab, worldLayer); cell.gameObject.SetActive(false); cells.Add(cell); }
+            while (aimPrefab != null && aimOverlays.Count < 49) { var overlay = Instantiate(aimPrefab, worldLayer); overlay.gameObject.SetActive(false); aimOverlays.Add(overlay); }
             while (badges.Count < 49) { var badge = Instantiate(badgePrefab, worldLayer); badge.gameObject.SetActive(false); badges.Add(badge); }
             Vector3 anchor = Local(trayAnchor);
+            if (trayFrame != null)
+            {
+                float scale = config.CellSize;
+                trayFrame.transform.localPosition = new Vector3(anchor.x - sim.Columns * config.CellSize * .5f, anchor.y, 0);
+                trayFrame.transform.localScale = Vector3.one * scale;
+                trayFrame.size = new Vector2((sim.Columns * config.CellSize + trayFramePadding) / scale, (sim.Rows * config.CellSize + trayFramePadding) / scale);
+            }
             mapping = new BoardMapping(new Point2(anchor.x - sim.Columns * config.CellSize * .5, anchor.y), config.CellSize, sim.Columns, sim.Rows);
             cellColor = cellPrefab.color;
             for (int i = 0; i < sim.Columns * sim.Rows; i++)
             {
                 var cell = new Cell(i % sim.Columns, i / sim.Columns);
                 cells[i].transform.localPosition = CellPosition(cell); cells[i].color = cellColor;
+                cells[i].sprite = darkCellSprite != null && (cell.Column + cell.Row) % 2 != 0 ? darkCellSprite : cellPrefab.sprite;
                 cells[i].transform.localScale = new Vector3((config.CellSize - 3) / cells[i].sprite.bounds.size.x, (config.CellSize - 3) / cells[i].sprite.bounds.size.y, 1);
+                if (i < aimOverlays.Count) { aimOverlays[i].transform.localPosition = cells[i].transform.localPosition; aimOverlays[i].transform.localScale = cells[i].transform.localScale; }
                 cells[i].gameObject.SetActive(true);
                 var item = sim.GetTrayCell(i);
                 if (item.Exists)
@@ -80,7 +97,7 @@ namespace Paw.Runtime
             foreach (var box in snapshot.Lanes) if (box != null) boxes.Add(box.Id, box);
             foreach (var box in snapshot.Queue) { boxes.Add(box.Id, box); queue.Add(box.Id); }
             for (int i = 0; i < lanes.Length; i++) if (snapshot.Lanes[i] != null) lanes[i].Show(snapshot.Lanes[i], config); else lanes[i].Hide();
-            RefreshQueue(); rackVisual.SetActive(false); stashAnchor.gameObject.SetActive(false);
+            RefreshQueue(); rackVisual.SetActive(false); if (rackClosed != null) rackClosed.SetActive(true); stashAnchor.gameObject.SetActive(false);
         }
 
         public void Clear()
@@ -88,6 +105,7 @@ namespace Paw.Runtime
             if (expressView != null) expressView.Clear(); if (floatText != null) floatText.Clear(); expressSlot = 0;
             foreach (var view in pool) if (view != null) view.gameObject.SetActive(false);
             foreach (var cell in cells) if (cell != null) { cell.transform.DOKill(); cell.transform.localRotation = Quaternion.identity; cell.gameObject.SetActive(false); }
+            foreach (var overlay in aimOverlays) if (overlay != null) overlay.gameObject.SetActive(false);
             foreach (var badge in badges) if (badge != null) badge.gameObject.SetActive(false);
             active.Clear(); boxes.Clear(); boxTargets.Clear(); arrival.Clear(); landed.Clear(); slots.Clear();
             plates.Clear(); rack.Clear(); stash.Clear(); queue.Clear(); used = 0;
@@ -134,6 +152,7 @@ namespace Paw.Runtime
                     {
                         plates.Remove(item.EntityId); slots.Remove(item.EntityId); landed.Remove(item.EntityId); stash.Add(item.EntityId);
                         Transform target = stashSlots != null && stashSlots.Length > 0 ? stashSlots[Math.Min(stash.Count - 1, stashSlots.Length - 1)] : stashAnchor;
+                        view.SetStashed(true);
                         view.Move(Local(target), item.Time, item.Time + config.StashHop, config.StashArc);
                         Compact(plates, plateAnchors, item.Time);
                         if (floatText != null && !config.ReducedMotion) floatText.ShowStash();
@@ -186,7 +205,7 @@ namespace Paw.Runtime
         private void Route(SimEvent item, PastryView view)
         {
             if (view == null) throw new InvalidOperationException("A route has no pastry view.");
-            plates.Remove(item.EntityId); rack.Remove(item.EntityId); stash.Remove(item.EntityId); landed.Remove(item.EntityId); slots.Remove(item.EntityId);
+            plates.Remove(item.EntityId); rack.Remove(item.EntityId); if (stash.Remove(item.EntityId)) view.SetStashed(false); landed.Remove(item.EntityId); slots.Remove(item.EntityId);
             arrival[item.EntityId] = item.EndTime;
             var destination = (Destination)item.Value;
             Vector3 target;
@@ -225,7 +244,7 @@ namespace Paw.Runtime
         }
         private void RefreshGifts()
         {
-            foreach (var lane in lanes) if (lane.Id != 0) lane.SetGift(boxes[lane.Id].Gift.HasValue);
+            foreach (var lane in lanes) if (lane.Id != 0) lane.SetGift(boxes[lane.Id].Gift);
             RefreshQueue();
         }
         public void Tick(long time, bool combo)
@@ -233,13 +252,19 @@ namespace Paw.Runtime
             foreach (var pair in active) pair.Value.Evaluate(time);
             foreach (var lane in lanes) lane.Evaluate(time);
             if (expressView != null) expressView.Tick(time);
-            rackVisual.SetActive(combo || rack.Count > 0); stashAnchor.gameObject.SetActive(stash.Count > 0);
+            bool rackOpen = combo || rack.Count > 0;
+            rackVisual.SetActive(rackOpen); if (rackClosed != null) rackClosed.SetActive(!rackOpen); stashAnchor.gameObject.SetActive(stash.Count > 0);
         }
         public void Preview(PreviewSummary summary, CardKind card, Cell target)
         {
             ClearPreview();
             foreach (var cell in CardShapes.GetCells(card, target, mapping.Columns, mapping.Rows))
-                cells[cell.Row * mapping.Columns + cell.Column].color = blastColor;
+            {
+                int index = cell.Row * mapping.Columns + cell.Column;
+                if (index < aimOverlays.Count && aimSprites != null && aimSprites.Length == 4 && aimSprites[(int)card] != null)
+                { aimOverlays[index].sprite = aimSprites[(int)card]; aimOverlays[index].gameObject.SetActive(true); }
+                else cells[index].color = blastColor;
+            }
             for (int i = 0; i < summary.Badges.Count && i < badges.Count; i++)
             {
                 var badge = summary.Badges[i]; badges[i].transform.localPosition = CellPosition(badge.Cell) + new Vector3(15, 14, 0);
@@ -249,6 +274,7 @@ namespace Paw.Runtime
         public void ClearPreview()
         {
             foreach (var cell in cells) if (cell != null) cell.color = cellColor;
+            foreach (var overlay in aimOverlays) if (overlay != null) overlay.gameObject.SetActive(false);
             foreach (var badge in badges) if (badge != null) badge.gameObject.SetActive(false);
         }
     }

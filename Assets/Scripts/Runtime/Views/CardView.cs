@@ -15,6 +15,7 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Card band image.")] private Image band;
         [SerializeField, Tooltip("Twenty-five mini-grid cells, row-major.")] private Image[] footprint;
         [SerializeField, Tooltip("Card background.")] private Image background;
+        [SerializeField, Tooltip("Pre-coloured card faces in card ID order.")] private Sprite[] cardFaces;
         [SerializeField, Tooltip("Inner visual moved independently from the hand slot.")] private RectTransform visual;
         [SerializeField, Tooltip("Visual opacity for the deal animation.")] private CanvasGroup visualGroup;
         [SerializeField, Tooltip("Background tint of an unselected card.")] private Color idleColor = new Color(1, .98f, .95f);
@@ -135,7 +136,9 @@ namespace Paw.Runtime
             reducedMotion = config.ReducedMotion;
             if (selectedState != selected) { selectedState = selected; ApplyPose(!Application.isPlaying); }
             band.color = config.CardColor(kind);
-            background.color = selected ? selectedColor : idleColor;
+            bool artwork = cardFaces != null && cardFaces.Length == 4 && cardFaces[(int)kind] != null;
+            if (artwork) background.sprite = cardFaces[(int)kind];
+            background.color = artwork ? Color.white : selected ? selectedColor : idleColor;
             for (int i = 0; i < footprint.Length; i++) footprint[i].color = emptyCellColor;
             foreach (var cell in CardShapes.GetCells(kind, new Cell(2, 2), 5, 5)) footprint[cell.Row * 5 + cell.Column].color = band.color;
             footprint[12].color = targetCellColor;
