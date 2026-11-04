@@ -1,14 +1,16 @@
 # WP04 — Boosters and revives
 
-Date: 2026-11-04. Status: **all 13 recommendations approved; implementation follows WP03.** Package 4 of [`CORE-LOOP-PLAN.md`](CORE-LOOP-PLAN.md). Builds after WP03 is finished (both packages touch `GameController`, `GameHud`, the hand and the `GameRoot` layout).
+Date: 2026-11-04. Status: **all 13 recommendations approved; ready for implementation after hierarchy Play review.** Package 4 of [`CORE-LOOP-PLAN.md`](CORE-LOOP-PLAN.md). The scene now uses the grouped layout described in [`UNITY-HIERARCHY-AND-PREFABS.md`](UNITY-HIERARCHY-AND-PREFABS.md).
 
 **Owner direction (2026-11-04):** finish WP03, then organize the hierarchy before WP04; introduce the reusable popup manager as part of WP04. The agent arranges and wires the result for the owner's visual review, using Layout Groups where appropriate.
+
+**Later layout clarification:** the owner's six-zone reference places boosters **above the hand**, with the hand and deck at the bottom. Use the existing `Canvas_Hud/SafeArea/Content/BoostersRoot` placeholder for the bar. This supersedes the earlier proposal to put the bar below the hand. Follow the existing 44-unit minimum touch-target convention; the prototype's 40-unit button height is a visual reference.
 
 ## 1. Goal
 
 Play `CoreGameplay` with the booster bar and the revives working the way GDD §8–9 and §11.4 describe and the HTML prototype behaves:
 
-- Shuffle, Call box and Stash in a bar at the very bottom of the screen, each with its count, or a green `AD` badge at 0.
+- Shuffle, Call box and Stash in a bar above the hand, each with its count, or a green `AD` badge at 0.
 - An inventory that lasts the whole session, so Retry, Next, restart and a scene reload don't refill it.
 - Every fail panel offers its revive (Express box for overflow and rack-not-cleared, +2 FLOP cards for out of moves) next to Retry.
 - The Express box is visible: it slides in, pastries hop in, and it drives off.
@@ -29,7 +31,7 @@ Not in WP04: real rewarded ads, coins and prices (phase 5, GDD §16), lives (§8
   - A stashed pastry stays drawn on its plate.
   - A Call box swap replaces the lane box at once, and the swapped-out box never shows up in the queue view (the sim emits no event for it; see decision 9).
   - All stash pastries share one anchor.
-- **Layout.** The migrated `Canvas_Hud` is 400×800. Cards sit at y −350 with an 88-unit height, so the hand already reaches −394 of −400 and there is no room for a booster bar.
+- **Layout.** The migrated `Canvas_Hud` is 400×800. `HandRoot` owns the fan and deck, and `BoostersRoot` reserves the area immediately above it. Layout and spacing still need to be fitted and checked against the existing tray and hand at supported screen sizes.
 - **Level 0** is `IsTutorial`, so the sim already refuses boosters there.
 
 ## 3. Prototype reference (v12 source, verified in code)
@@ -81,7 +83,7 @@ Nothing else in the rules changes. Existing events, IDs and enum members stay as
 
 ### 4.4 Booster bar (`BoosterBarView`, `BoosterButtonView`)
 
-- **Look.** Three buttons on the HUD canvas at the bottom of the safe area. Each has a placeholder icon, a name and a count badge. Height, gap, colours (badge butter, `AD` green, disabled alpha .45) and the label strings are serialized fields on the prefab.
+- **Look.** Three buttons in `BoostersRoot` above the hand, inside the HUD safe area. Each has a placeholder icon, a name and a count badge. Height, gap, colours (badge butter, `AD` green, disabled alpha .45) and the label strings are serialized fields on the prefab; touch targets are at least 44 units high.
 - **Press.**
   - At 0, with `ViewConfig.simulateRewardedAds` on: `TryGrantBooster`.
   - Otherwise `TryUseBooster`. On refusal, the button shakes, nothing is spent, and no toast appears (GDD §11.1: no instruction text outside the tutorial).
@@ -185,11 +187,11 @@ On 2026-11-04 the owner approved the 13 recommendations presented in the convers
     - One short body line per panel, from the prototype, so overflow and rack-not-cleared can be told apart.
     - The floating feedback words as placeholder labels.
     - All strings are serialized on the prefab. Alternative: no body lines and no floating words until phase 3.
-13. **Bar layout.** Proposal: a 40-unit bar with an 8-unit gap at the bottom of the safe area. The hand and the board move up on the prefab to make room; you can retune by hand. Keep the 400×800 reference if it fits; if not, raise `ViewConfig.boardHeight` together with the canvas reference (screens shorter than the new ratio then scale slightly).
+13. **Bar layout.** The original approved proposal placed a 40-unit bar below the hand. The owner's later six-zone reference places it above the hand instead; use `BoostersRoot` and at least 44-unit touch targets, with the approved 8-unit gap as the starting point. Retain hand-adjustable placement and check the 400×800 reference at supported screen sizes. Any change to the owned `ViewConfig` dimensions requires the owner's approval.
 
 ## 9. Risks
 
-- **Layout.** There's no room for the bar today. Moving zones touches WP03's safe-area and fan work, which is why WP04 builds after WP03. The final positions are authored on the prefab and must be checked in renders at every WP03 size.
+- **Layout.** Fitting the bar above the hand may touch WP03's safe-area and fan work. The final positions are authored on the prefab and must be checked in renders at every WP03 size.
 - **Overflow panel over a running combo.** Pastries keep landing and boxes keep cycling under the panel. The panel blocks input, but the clock and views must keep ticking. Retry must clear in-flight views (`board.Clear` already does).
 - **`SessionInventory` is a static.** It needs its reset hook and must never hold Unity objects. It survives scene loads on purpose.
 - **Grant event in replays.** Old replays have no grants, so this doesn't break them. Prediction clones carry the counts, which is harmless.

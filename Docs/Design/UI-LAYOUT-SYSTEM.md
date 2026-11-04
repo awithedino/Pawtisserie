@@ -26,13 +26,14 @@ The migrated scene uses separate HUD and popup canvases with a shared orthograph
 
 | Canvas | Sorting order | Contents |
 |---|---|---|
-| `Canvas_Hud` | 100 (built) | top bar (level pill, restart), queue strip, shelf counter, deck pile, hand, booster bar, aim pill |
+| `Canvas_Hud` | 100 (built) | top bar, deck, hand and empty booster-area placeholder |
 | `Canvas_Banners` | TBD (future) | floating words and short toasts (`+1 CARD`, `COOLING RACK`, `CLEARS AT COMBO END`, tutorial coach bubble) |
 | `Canvas_Popups` | 110 (built) | dim, then panels: outcome, Express offer, out of moves, tutorial done |
 
 - Both built canvases: Render Mode **Screen Space - Camera**, the scene's single orthographic camera, same Canvas Scaler (section 3). World sprites include badges at order 50 (see the hierarchy document); canvases draw on top by plane distance and sorting order.
 - Which canvas owns what is decided by **how often it changes and who blocks input**: the hand redraws every move, popups almost never, banners spawn and vanish. The HUD and popup canvases have been split; add the banners canvas with its first feature.
 - One `EventSystem` per scene, outside the canvases (hierarchy document, section 2).
+- `CounterRow` and `ShelfRack` each have a world-space child canvas for their associated label; `BoardRoot` has a world-space input/aim canvas. These use the scene camera and move or hide with their zone. Their text is not parented to `Canvas_Hud`.
 - Never put a world object under a canvas, or a canvas element in the world.
 
 ---
@@ -68,13 +69,13 @@ Mapping of GDD 11.1 (top to bottom) to the two spaces:
 |---|---|---|
 | Top bar: level pill with cat icon (left), round restart (right) | `Canvas_Hud` | restart needs a 44-unit target |
 | Counter: 3 lanes of pastry boxes, scalloped awning | world | boxes are flying/animated sprites |
-| Box queue: `NEXT` + mini boxes, `SHELF n/5` on the right | `Canvas_Hud` | text + mini images under a Horizontal Layout Group |
-| Display shelf: 5 plates, stash tin on the right | world | pastries land on plates |
+| Box queue: `NEXT` + mini boxes | world `CounterRow` | `NEXT` on its child canvas; boxes are sprite views |
+| Display shelf: 5 plates, stash tin and `SHELF n/5` | world `ShelfRack` | shelf counter on its child canvas; pastries land on plates |
 | Cooling rack: 2 slots, folded flat when closed | world | label `RACK` and `CLEARS AT COMBO END` are banners |
-| Baking tray: the grid | world | input through the canvas raycast surface (`TrayHitArea`) [verified in WP03] |
+| Baking tray: the grid | world `BoardRoot` | input through its world-space canvas raycast surface (`TrayHitArea`) |
 | Hand: deck pile with count (left), 5 cards fanned | `Canvas_Hud` | fan positions computed by `HandView` (the one allowed computed layout) |
 | Booster bar: Shuffle, Call box, Stash | `Canvas_Hud` | very bottom edge; a Horizontal Layout Group of three instances of one prefab |
-| Aim pill, preview badges | pill on `Canvas_Hud`; badges world | badge = shape + color, never color alone [GDD 19] |
+| Aim pill, preview badges | `BoardRoot` child canvas and world | badge = shape + color, never color alone [GDD 19] |
 
 ---
 

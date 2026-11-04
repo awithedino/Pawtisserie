@@ -14,12 +14,16 @@ Labels: **[verified]** read in a project file on 2026-11-04, **[Sand Drop]** a c
 
 ```text
 --CONTROLLERS-- / GameController
---WORLD-- / Board / CounterRow, ShelfRack, Cat, tray and other world visuals
+--WORLD-- / Board / CounterRow (including NEXT), ShelfRack (including SHELF), BoardRoot, Cat
 --RENDERING-- / GameCamera
 --USER INTERFACE-- / Canvas_Hud, Canvas_Popups, EventSystem
 ```
 
 `Board` nests `CounterRow` and `ShelfRack`; the HUD nests `Hand` and the popup canvas nests `OutcomePanel`. One EventSystem is present. `GameController` has scene references to both canvases, their safe areas and the camera. The HUD and popup orders are 100 and 110, and each uses the 400×800 reference. `GameRoot.prefab` remains available as the legacy monolith but is no longer instanced in the scene. The scene is not in Build Settings. All `IsConfigured` checks passed after reopening; an owner Play check is outstanding.
+
+The owner requested six visual groups: `TopBar` (level and restart), `CounterRow` (boxes, queue and NEXT), `ShelfRack` (plates and SHELF), `BoardRoot` (tray, input, preview and pooled pastries), `BoostersRoot` (empty WP04 placeholder), and `HandRoot` (cards and deck). `BoardRoot`, `CounterRow` and `ShelfRack` are in the world; `TopBar`, `BoostersRoot` and `HandRoot` remain under the HUD safe area. Pooled pastries keep their `BoardRoot` parent while flying and on storage. World-zone labels use child canvases; their cameras and the HUD's cross-prefab references are wired in the scene. Hiding the HUD leaves the world labels visible.
+
+Within those zones, `CounterRow/Lanes` groups the three lanes and awning, and `CounterRow/Queue` groups the queue boxes and NEXT canvas. `ShelfRack/Plates` groups the plates, stash and SHELF canvas; `ShelfRack/Rack` groups the rack anchors, artwork and overflow anchor. `HandRoot/Cards` groups the five cards while the deck remains alongside it. These grouping parents have neutral transforms; the card fan is still animated by `HandView` rather than a Layout Group.
 
 ---
 
