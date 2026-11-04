@@ -59,6 +59,26 @@ namespace Paw.Tests
         }
 
         [Test]
+        public void BoosterGrantIsDeterministicAndAllowedDuringACombo()
+        {
+            var first = Create(CoreModelTests.Standard()); var replay = Create(CoreModelTests.Standard());
+            foreach (var sim in new[] { first, replay })
+            {
+                Assert.IsFalse(sim.TryGrantBooster((BoosterKind)99, out _));
+                Assert.IsTrue(sim.TryPlay(0, new Cell(0, 0), out _));
+                Assert.IsTrue(sim.TryGrantBooster(BoosterKind.Shuffle, out _));
+                Assert.AreEqual(6, sim.GetInventory(BoosterKind.Shuffle));
+                sim.RunUntilSettled();
+            }
+            Assert.AreEqual(Snapshot(first.State), Snapshot(replay.State));
+            Assert.AreEqual(Transcript(first), Transcript(replay));
+            Assert.AreEqual(1, first.Events.Count(e => e.Kind == SimEventKind.BoosterGranted));
+            Assert.IsFalse(Create(CoreModelTests.Tutorial()).TryGrantBooster(BoosterKind.Shuffle, out _));
+            for (int x = 0; x < 3; x++) Play(first, x, 1);
+            Assert.IsFalse(first.TryGrantBooster(BoosterKind.Shuffle, out _));
+        }
+
+        [Test]
         public void ThreeColumnsWinAndFreshRunsHaveIndependentState()
         {
             var level = CoreModelTests.Standard(); var sim = Create(level);
@@ -257,6 +277,11 @@ namespace Paw.Tests
             Play(sim, 1, 1); var plates = sim.State.Plates.ToArray();
             int start = sim.Events.Count;
             Assert.IsTrue(sim.TryUseBooster(BoosterKind.CallBox, out _)); sim.RunUntilSettled();
+            var swap = sim.Events.Skip(start).ToArray();
+            int queuedIndex = Array.FindIndex(swap, e => e.Kind == SimEventKind.BoxQueued);
+            int arrivingIndex = Array.FindIndex(swap, e => e.Kind == SimEventKind.BoxArriving);
+            Assert.IsTrue(queuedIndex >= 0 && arrivingIndex > queuedIndex);
+            Assert.AreEqual(0, swap[queuedIndex].Value);
             var routed = sim.Events.Skip(start).Where(e => e.Kind == SimEventKind.Routed && e.Value == (int)Destination.Box).ToArray();
             Assert.AreEqual(string.Join(",", stashed), string.Join(",", routed.Select(e => e.EntityId)));
             Assert.AreEqual(string.Join(",", plates), string.Join(",", sim.State.Plates));

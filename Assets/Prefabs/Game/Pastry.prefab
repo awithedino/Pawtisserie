@@ -107,6 +107,9 @@ MonoBehaviour:
   - {fileID: 2747690628134850419, guid: 845c465677afd6e44842bbbc2bf97ce3, type: 3}
   canSprite: {fileID: 7482667652216324306, guid: f9ed82d34feb56b4098a88551a2eb8c6, type: 3}
   macaronRotation: 90
+  canColor: {r: 0.92, g: 0.91, b: 0.87, a: 1}
+  expressBounce: 0.12
+  expressBounceDuration: 0.18
 --- !u!1 &7049957729810003901
 GameObject:
   m_ObjectHideFlags: 0

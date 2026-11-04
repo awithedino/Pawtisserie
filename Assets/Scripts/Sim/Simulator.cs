@@ -22,6 +22,7 @@ namespace Paw.Sim
         public int Columns => board.Columns;
         public int Rows => board.Rows;
         public int LevelId => board.LevelId;
+        public bool IsTutorial => board.IsTutorial;
         public Outcome CurrentOutcome => board.Outcome;
         public int QueueCount => board.Queue.Count;
         public int PastryCount => board.Pastries.Count;
@@ -232,6 +233,19 @@ namespace Paw.Sim
 
         public bool TryUseBooster(BoosterKind kind, out string reason) => BoosterEffects.TryUse(this, kind, out reason);
 
+        public bool TryGrantBooster(BoosterKind kind, out string reason)
+        {
+            if (board.Outcome != Outcome.Playing) { reason = "Level is not playing."; return false; }
+            if (board.IsTutorial) { reason = "Boosters are disabled in the tutorial."; return false; }
+            int index = (int)kind;
+            if (index < 0 || index >= board.Inventory.Length) { reason = "Unknown booster."; return false; }
+            if (board.Inventory[index] == int.MaxValue) { reason = "Booster inventory is full."; return false; }
+            board.Inventory[index]++;
+            Emit(SimEventKind.BoosterGranted, index);
+            reason = null;
+            return true;
+        }
+
         public bool TryRevive(out string reason)
         {
             reason = null;
@@ -264,7 +278,7 @@ namespace Paw.Sim
         internal void SwapIn(int lane, BoxState next)
         {
             var previous = board.Lanes[lane];
-            if (previous != null) board.Queue.Insert(0, previous);
+            if (previous != null) { board.Queue.Insert(0, previous); Emit(SimEventKind.BoxQueued, previous.Id, lane); }
             board.Lanes[lane] = next; next.Phase = BoxPhase.Arriving;
             Emit(SimEventKind.BoxArriving, next.Id, lane, endTime: Time + config.BoxArrival); Schedule("ready", config.BoxArrival, next.Id);
         }

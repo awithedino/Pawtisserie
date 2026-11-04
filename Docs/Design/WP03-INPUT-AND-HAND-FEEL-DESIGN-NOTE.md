@@ -178,3 +178,5 @@ On 2026-11-04 the owner chose the revised touch and combo behavior in decisions 
 - **Still pending:** specific real-device touch and safe-area verification, and HTML side-by-side parity. The hierarchy migration was subsequently implemented; the owner's check of that migrated scene is pending.
 
 **Owner Play feedback:** on 2026-11-04 the owner reported that WP03 looks good. No specific device or individual checklist results were provided, so real-device safe-area/touch and HTML parity remain unverified.
+
+**WP04 layout update:** the owner later approved scaling `BoardRoot` to 80% and moving it up 15 units to fit the booster bar above the hand. The scaled tray's four corner mappings pass an isolated Editor check; drag feel and touch on the updated layout need the owner's Play check.

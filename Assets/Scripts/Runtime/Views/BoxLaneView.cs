@@ -1,6 +1,7 @@
 using System;
 using Paw.Presentation;
 using Paw.Sim;
+using DG.Tweening;
 using UnityEngine;
 
 namespace Paw.Runtime
@@ -19,6 +20,8 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Arrival offset in logical units.")] private Vector3 arrivalOffset = new Vector3(0, 110, 0);
         [SerializeField, Tooltip("Departure offset in logical units.")] private Vector3 departureOffset = new Vector3(0, 140, 0);
         [SerializeField, Tooltip("Filled slot tint.")] private Color filledColor = new Color(.36f, .22f, .18f);
+        [SerializeField, Tooltip("Queue pulse size."), Min(0)] private float pulseScale = .15f;
+        [SerializeField, Tooltip("Queue pulse duration in seconds."), Min(0)] private float pulseDuration = .2f;
         private FlightPath motion;
         private bool moving;
         private int reserved;
@@ -26,6 +29,8 @@ namespace Paw.Runtime
         private int need;
         private Vector3 lidSize;
         private bool lidSizeCached;
+        private Vector3 visualScale;
+        private bool visualScaleCached;
         private long closeStart;
         private long closeEnd;
         private bool closing;
@@ -36,6 +41,8 @@ namespace Paw.Runtime
         {
             if (!IsConfigured) throw new InvalidOperationException("BoxLaneView: visual, markers, sprites and gift tag are required.");
             moving = false; visual.localPosition = Vector3.zero;
+            if (!visualScaleCached) { visualScale = visual.localScale; visualScaleCached = true; }
+            visual.DOKill(); visual.localScale = visualScale;
             if (!lidSizeCached) { lidSize = lid.transform.localScale; lidSizeCached = true; }
             closing = false; lid.enabled = false; lid.transform.localScale = lidSize;
             Id = box.Id; Type = box.Type; need = box.Need; filled = box.Filled; reserved = box.Reserved;
@@ -45,7 +52,15 @@ namespace Paw.Runtime
             marker.transform.localRotation = Quaternion.Euler(0, 0, Type == 1 ? macaronRotation : 0);
             giftTag.SetActive(box.Gift.HasValue); visual.gameObject.SetActive(true); Paint();
         }
-        public void Hide() { Id = 0; moving = false; visual.gameObject.SetActive(false); }
+        public void Hide() { Id = 0; moving = false; visual.DOKill(); if (visualScaleCached) visual.localScale = visualScale; visual.gameObject.SetActive(false); }
+        public void Pulse(bool reducedMotion)
+        {
+            if (reducedMotion || pulseDuration <= 0 || visual == null) return;
+            if (!visualScaleCached) { visualScale = visual.localScale; visualScaleCached = true; }
+            visual.DOKill(); visual.localScale = visualScale;
+            visual.DOPunchScale(Vector3.one * pulseScale, pulseDuration, 6, .5f).SetUpdate(true);
+        }
+        private void OnDisable() { if (visual != null) { visual.DOKill(); if (visualScaleCached) visual.localScale = visualScale; } }
         public Vector3 ReservePosition(long time)
         {
             int slot = Mathf.Min(reserved++, spots.Length - 1);

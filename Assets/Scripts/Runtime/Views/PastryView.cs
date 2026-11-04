@@ -1,5 +1,6 @@
 using System;
 using Paw.Presentation;
+using DG.Tweening;
 using UnityEngine;
 
 namespace Paw.Runtime
@@ -13,10 +14,13 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Cream can sprite.")] private Sprite canSprite;
         [SerializeField, Tooltip("Rotation of the capsule pastry sprite in degrees.")] private float macaronRotation = 90;
         [SerializeField, Tooltip("Cream can tint.")] private Color canColor = new Color(.92f, .91f, .87f);
+        [SerializeField, Tooltip("Express landing bounce size."), Min(0)] private float expressBounce = .12f;
+        [SerializeField, Tooltip("Express landing bounce duration in seconds."), Min(0)] private float expressBounceDuration = .18f;
         private FlightPath motion;
         private bool moving;
         private bool primed;
         private Color color;
+        private Vector3 bodyScale;
         public int Id { get; private set; }
         public int Type { get; private set; }
         public bool IsConfigured => body != null && cover != null && canSprite != null && pastrySprites != null && pastrySprites.Length == 4;
@@ -31,6 +35,7 @@ namespace Paw.Runtime
             Vector2 size = body.sprite.bounds.size;
             float largest = Mathf.Max(size.x, size.y);
             body.transform.localScale = Vector3.one * (config.PastrySize / largest);
+            bodyScale = body.transform.localScale;
             body.transform.localRotation = Quaternion.Euler(0, 0, type == 1 ? macaronRotation : 0);
             cover.transform.localScale = new Vector3(largest * 1.15f / cover.sprite.bounds.size.x, largest * 1.15f / cover.sprite.bounds.size.y, 1);
             cover.enabled = cloche; body.sortingOrder = 10; gameObject.SetActive(true);
@@ -53,5 +58,14 @@ namespace Paw.Runtime
             if (moving) { transform.localPosition = PositionAt(time); if (time >= motion.EndTime) moving = false; }
             if (primed) body.color = Color.Lerp(color, Color.white, .5f + .5f * Mathf.Sin(time * .00003f));
         }
+        public void FinishExpress(long time, bool reducedMotion)
+        {
+            transform.localPosition = PositionAt(time); moving = false;
+            if (reducedMotion || expressBounceDuration <= 0) { gameObject.SetActive(false); return; }
+            body.transform.DOKill(); body.transform.localScale = bodyScale;
+            body.transform.DOPunchScale(bodyScale * expressBounce, expressBounceDuration, 6, .5f).SetUpdate(true)
+                .OnComplete(() => { if (this != null) gameObject.SetActive(false); });
+        }
+        private void OnDisable() { if (body != null) { body.transform.DOKill(); if (bodyScale != Vector3.zero) body.transform.localScale = bodyScale; } }
     }
 }

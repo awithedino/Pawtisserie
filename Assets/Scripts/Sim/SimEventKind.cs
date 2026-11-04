@@ -29,5 +29,7 @@ namespace Paw.Sim
         Revived = 24,
         ExpressStarted = 25,
         ExpressDeparted = 26,
+        BoosterGranted = 27,
+        BoxQueued = 28,
     }
 }

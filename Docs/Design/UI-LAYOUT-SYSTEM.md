@@ -26,7 +26,7 @@ The migrated scene uses separate HUD and popup canvases with a shared orthograph
 
 | Canvas | Sorting order | Contents |
 |---|---|---|
-| `Canvas_Hud` | 100 (built) | top bar, deck, hand and empty booster-area placeholder |
+| `Canvas_Hud` | 100 (built) | top bar, booster bar, deck and hand |
 | `Canvas_Banners` | TBD (future) | floating words and short toasts (`+1 CARD`, `COOLING RACK`, `CLEARS AT COMBO END`, tutorial coach bubble) |
 | `Canvas_Popups` | 110 (built) | dim, then panels: outcome, Express offer, out of moves, tutorial done |
 
@@ -74,7 +74,7 @@ Mapping of GDD 11.1 (top to bottom) to the two spaces:
 | Cooling rack: 2 slots, folded flat when closed | world | label `RACK` and `CLEARS AT COMBO END` are banners |
 | Baking tray: the grid | world `BoardRoot` | input through its world-space canvas raycast surface (`TrayHitArea`) |
 | Hand: deck pile with count (left), 5 cards fanned | `Canvas_Hud` | fan positions computed by `HandView` (the one allowed computed layout) |
-| Booster bar: Shuffle, Call box, Stash | `Canvas_Hud` | very bottom edge; a Horizontal Layout Group of three instances of one prefab |
+| Booster bar: Shuffle, Call box, Stash | `Canvas_Hud` | above the hand; a Horizontal Layout Group of three instances of one prefab |
 | Aim pill, preview badges | `BoardRoot` child canvas and world | badge = shape + color, never color alone [GDD 19] |
 
 ---
@@ -106,17 +106,17 @@ XPopup            root: CanvasGroup + the popup script; fixed size; centered anc
   Close           anchored top-right, last sibling so it draws on top
 ```
 
-GDD 11.4 lists the panels: Win "Orders boxed!" (Next level, double coins via ad TBD), Overflow/rack "Shelf overflow" (Express box, Retry), Out of moves "Butter is out of moves" (+2 FLOP, Retry), Tutorial done (Start level 1). Today one `OutcomePanelView` on `Canvas_Popups` switches the title and buttons. The reusable manager is planned for WP04.
+GDD 11.4 lists the panels: Win "Orders boxed!" (Next level, double coins via ad TBD), Overflow/rack "Shelf overflow" (Express box, Retry), Out of moves "Butter is out of moves" (+2 FLOP, Retry), Tutorial done (Start level 1). One `OutcomePanelView` on `Canvas_Popups` switches the title and buttons; the WP04 `PopupManager` manages its shared dim and popup stack. Owner Play review is pending.
 
-When the second distinct panel appears (WP04 Express and FLOP offers), introduce the two Sand Drop pieces, small and generic [proposal, needs a design note when built]:
-- `UiPopup` base: a `CanvasGroup` root, pop-in/out on **unscaled time**, a `Closed` event raised once after the close animation, helpers that throw naming an empty field, `DismissOnBack`.
-- `PopupManager` (one on `Canvas_Popups`): `Open<T>(setup)` returns the open one if that type is up, a stack, one shared dim, Escape/back closes the top panel. In its `Awake` it switches every scene popup **on and straight off** so their `Awake` has run before `Setup` is called (a panel saved inactive has not run `Awake`).
+WP04 introduced two small generic pieces:
+- `UiPopup` is a component with a serialized `CanvasGroup`, unscaled opacity fades, a `Closed` event after its close fade and a `DismissOnBack` option. It activates an inactive popup when opened. The current outcome panel is saved active and hidden through its CanvasGroup.
+- `PopupManager` (one on `Canvas_Popups`) accepts a `UiPopup` instance in `Open`, ignores duplicate opens of that instance, maintains a stack and a shared dim, and routes Escape/back to the top panel according to its dismissal policy. Future distinct popup types and their setup remain future work.
 
 Rules for all panels
 - Pop animation uses unscaled time (a paused or slow-motion game must not slow the panel).
 - A panel is **shrunk to fit** the safe area with a margin (24 units), never enlarged.
 - While a panel is visible, the hand and board ignore input (`CanvasGroup.blocksRaycasts` on the panel, `GameController.CanInput` already checks `PanelVisible`) [verified].
-- Current WP02 behavior uses one 0.7 s delay after the outcome event and waits for settlement [verified, `PROJECT.md`]. The owner-approved WP04 behavior replaces this: win appears 0.7 s after settlement, overflow 0.55 s after the first overflow pastry lands without waiting for the combo, and other fail panels at settlement. See the WP04 design note §8; do not preserve the current single delay as the target.
+- WP04 timing uses 0.7 s after settlement for a win, 0.55 s after the first overflow pastry lands without waiting for the combo, and the settled-failure delay for other failures. See the WP04 design note §8; owner Play timing remains to be checked.
 - Buttons are identified by serialized field, wired in the script (`onClick.AddListener` in `OnEnable`, removed in `OnDisable`, as `GameHud` does now) [verified].
 
 ---

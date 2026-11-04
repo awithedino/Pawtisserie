@@ -1,6 +1,6 @@
 # WP04 — Boosters and revives
 
-Date: 2026-11-04. Status: **all 13 recommendations approved; ready for implementation after hierarchy Play review.** Package 4 of [`CORE-LOOP-PLAN.md`](CORE-LOOP-PLAN.md). The scene now uses the grouped layout described in [`UNITY-HIERARCHY-AND-PREFABS.md`](UNITY-HIERARCHY-AND-PREFABS.md).
+Date: 2026-11-04. Status: **implemented with placeholders; owner considers WP04 complete and approved its commit.** Package 4 of [`CORE-LOOP-PLAN.md`](CORE-LOOP-PLAN.md). The scene uses the grouped layout described in [`UNITY-HIERARCHY-AND-PREFABS.md`](UNITY-HIERARCHY-AND-PREFABS.md).
 
 **Owner direction (2026-11-04):** finish WP03, then organize the hierarchy before WP04; introduce the reusable popup manager as part of WP04. The agent arranges and wires the result for the owner's visual review, using Layout Groups where appropriate.
 
@@ -197,3 +197,14 @@ On 2026-11-04 the owner approved the 13 recommendations presented in the convers
 - **Grant event in replays.** Old replays have no grants, so this doesn't break them. Prediction clones carry the counts, which is harmless.
 - **Express slots.** In-flight overflow pastries are re-routed mid-air. Their arc restarts from their current position, so a visible kink is possible (to check in Play).
 - **Editor.** Steps 4–5 need the Unity MCP bridge, which isn't connected in the session that wrote this note.
+
+## 10. Build checkpoint (2026-11-04)
+
+- Implemented the grant and queue events, session wallet, outcome clock, booster state, booster buttons, stash slots, queue pulse, Express view and popup manager. The outcome panel now has a revive button and short descriptions. The ad action is simulated; no ads SDK or payment was added.
+- `BoosterBar` uses a Horizontal Layout Group in `BoostersRoot`; button targets are 112×44. On the owner's later approval, the `BoardRoot` prefab was scaled to 80% and moved up 15 units so the 7×7 tray clears the bar; the collector was positioned over the shelf. Board dimensions in `ViewConfig` remain 400×800.
+- `CoreGameplay` scene changes: the `GameController` instance references the booster bar, popup manager and outcome popup; the Express label canvas references the existing camera. `ViewConfig.asset` stores the approved new defaults. Existing owner edits to the outcome panel prefab were retained while adding the revive UI.
+- Popup animation currently uses unscaled opacity fades rather than a separate scale pop. The outcome is intentionally non-dismissible via back; the placeholder manager handles a stack and shared dim. Express visuals use placeholder artwork and a reusable floating label.
+- SimHarness and Unity EditMode passed 74 cases; CompileCheck passed with no errors or warnings. An isolated Editor check invoked the real Shuffle and revive buttons, spent/granted inventory, routed stash and Call box events, and collected pastries with Express. It also verified scaled tray mapping at all four 7×7 corners. These are edit-mode checks, not a Play session.
+- The 7×7 screen was rendered at 360×640, 400×800, 430×932 and with simulated insets; a 400×800 overflow panel render was inspected. Actual timing, touch, combo behavior, session reload, other outcome panels, and real-device safe areas still require the owner's Play check in section 7.
+
+**Owner acceptance:** the owner stated that WP04 is through and authorized the commit on 2026-11-04. Specific device and per-scenario results were not provided.

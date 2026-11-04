@@ -17,6 +17,9 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Aim badge prefab.")] private BadgeView badgePrefab;
         [SerializeField, Tooltip("Optional nested counter and queue prefab.")] private CounterRowView counterRow;
         [SerializeField, Tooltip("Optional nested shelf and rack prefab.")] private ShelfRackView shelfRack;
+        [SerializeField, Tooltip("Express collector for revive presentation.")] private ExpressView expressView;
+        [SerializeField, Tooltip("Reusable floating feedback label.")] private FloatTextView floatText;
+        [SerializeField, Tooltip("Authored stash positions, with extras stacked on the last.")] private Transform[] stashSlots;
         [SerializeField, Tooltip("Three counter box views.")] private BoxLaneView[] lanes;
         [SerializeField, Tooltip("Miniature queue views.")] private BoxLaneView[] queueViews;
         [SerializeField, Tooltip("Five authored plate anchors.")] private Transform[] plateAnchors;
@@ -43,6 +46,7 @@ namespace Paw.Runtime
         private ViewConfig config;
         private BoardMapping mapping;
         private int used;
+        private int expressSlot;
         private Color cellColor;
         public bool IsConfigured => worldLayer != null && trayAnchor != null && pastryPrefab != null && cellPrefab != null && badgePrefab != null &&
             (counterRow != null ? counterRow.IsConfigured : lanes != null && lanes.Length == 3 && queueViews != null && queueViews.Length >= 12) &&
@@ -81,6 +85,7 @@ namespace Paw.Runtime
 
         public void Clear()
         {
+            if (expressView != null) expressView.Clear(); if (floatText != null) floatText.Clear(); expressSlot = 0;
             foreach (var view in pool) if (view != null) view.gameObject.SetActive(false);
             foreach (var cell in cells) if (cell != null) { cell.transform.DOKill(); cell.transform.localRotation = Quaternion.identity; cell.gameObject.SetActive(false); }
             foreach (var badge in badges) if (badge != null) badge.gameObject.SetActive(false);
@@ -93,10 +98,10 @@ namespace Paw.Runtime
             if (used >= pool.Count) throw new InvalidOperationException("Pastry view pool exhausted; increase ViewConfig pool size.");
             var view = pool[used++]; active.Add(id, view); return view;
         }
-        private void Release(int id)
+        private void Release(int id, long time = 0, bool express = false)
         {
             if (!active.TryGetValue(id, out PastryView view)) return;
-            active.Remove(id); view.gameObject.SetActive(false);
+            active.Remove(id); if (express) view.FinishExpress(time, config.ReducedMotion); else view.gameObject.SetActive(false);
             // Returned views are reused on the next level; total entities never exceed the authored tray.
         }
         private Vector3 Local(Transform anchor) => worldLayer.InverseTransformPoint(anchor.position);
@@ -124,6 +129,16 @@ namespace Paw.Runtime
                 case SimEventKind.ClocheBroken: if (view != null) view.SetCloche(false); break;
                 case SimEventKind.CanPrimed: if (view != null) view.Prime(); break;
                 case SimEventKind.CanExploded: Release(item.EntityId); break;
+                case SimEventKind.Stashed:
+                    if (view != null)
+                    {
+                        plates.Remove(item.EntityId); slots.Remove(item.EntityId); landed.Remove(item.EntityId); stash.Add(item.EntityId);
+                        Transform target = stashSlots != null && stashSlots.Length > 0 ? stashSlots[Math.Min(stash.Count - 1, stashSlots.Length - 1)] : stashAnchor;
+                        view.Move(Local(target), item.Time, item.Time + config.StashHop, config.StashArc);
+                        Compact(plates, plateAnchors, item.Time);
+                        if (floatText != null && !config.ReducedMotion) floatText.ShowStash();
+                    }
+                    break;
                 case SimEventKind.TrayFell: if (view != null) view.Move(CellPosition(item.Cell), item.Time, item.EndTime, 0); break;
                 case SimEventKind.Routed: Route(item, view); break;
                 case SimEventKind.Landed:
@@ -133,7 +148,7 @@ namespace Paw.Runtime
                         int boxId = boxTargets[item.EntityId]; boxes[boxId].Filled++;
                         var lane = FindLane(boxId); if (lane != null) lane.Land(); Release(item.EntityId);
                     }
-                    else if ((Destination)item.Value == Destination.Express) Release(item.EntityId);
+                    else if ((Destination)item.Value == Destination.Express) Release(item.EntityId, item.Time, true);
                     break;
                 case SimEventKind.BoxClosing:
                     var closing = FindLane(item.EntityId); if (closing != null) closing.Close(item.Time, item.EndTime); break;
@@ -144,6 +159,19 @@ namespace Paw.Runtime
                 case SimEventKind.BoxArriving:
                     queue.Remove(item.EntityId); lanes[item.Value].Show(boxes[item.EntityId], config);
                     lanes[item.Value].Arrive(item.Time, item.EndTime); RefreshQueue(); break;
+                case SimEventKind.BoxQueued:
+                    var returned = FindLane(item.EntityId); if (returned != null) returned.Hide();
+                    queue.Insert(0, item.EntityId); RefreshQueue(); if (floatText != null && !config.ReducedMotion) floatText.ShowCalled(); break;
+                case SimEventKind.BoxCalled:
+                    queue.Remove(item.EntityId); queue.Insert(0, item.EntityId); RefreshQueue();
+                    if (queueViews.Length > 0) queueViews[0].Pulse(config.ReducedMotion);
+                    if (floatText != null && !config.ReducedMotion) floatText.ShowNext(); break;
+                case SimEventKind.BoosterUsed:
+                    if ((BoosterKind)item.EntityId == BoosterKind.Shuffle && floatText != null && !config.ReducedMotion) floatText.ShowShuffle(); break;
+                case SimEventKind.ExpressStarted:
+                    expressSlot = 0; if (expressView != null) expressView.Arrive(item.Time); if (floatText != null && !config.ReducedMotion) floatText.ShowExpress(); break;
+                case SimEventKind.ExpressDeparted:
+                    if (expressView != null) expressView.Depart(item.Time); break;
                 case SimEventKind.BoxResized:
                     boxes[item.EntityId].Need = item.Value;
                     var resized = FindLane(item.EntityId); if (resized != null) resized.SetNeed(item.Value); RefreshQueue(); break;
@@ -172,6 +200,7 @@ namespace Paw.Runtime
             else if (destination == Destination.Plate) { plates.Add(item.EntityId); slots[item.EntityId] = plates.Count - 1; target = Local(plateAnchors[plates.Count - 1]); }
             else if (destination == Destination.Rack) { rack.Add(item.EntityId); slots[item.EntityId] = rack.Count - 1; target = Local(rackAnchors[rack.Count - 1]); }
             else if (destination == Destination.Stash) { stash.Add(item.EntityId); target = Local(stashAnchor); }
+            else if (destination == Destination.Express && expressView != null) target = worldLayer.InverseTransformPoint(expressView.Slot(expressSlot++));
             else target = Local(overflowAnchor);
             view.Move(target, item.Time, item.EndTime, config.ArcHeight);
             Compact(plates, plateAnchors, item.Time); Compact(rack, rackAnchors, item.Time);
@@ -203,6 +232,7 @@ namespace Paw.Runtime
         {
             foreach (var pair in active) pair.Value.Evaluate(time);
             foreach (var lane in lanes) lane.Evaluate(time);
+            if (expressView != null) expressView.Tick(time);
             rackVisual.SetActive(combo || rack.Count > 0); stashAnchor.gameObject.SetActive(stash.Count > 0);
         }
         public void Preview(PreviewSummary summary, CardKind card, Cell target)

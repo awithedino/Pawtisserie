@@ -437,6 +437,8 @@ MonoBehaviour:
   arrivalOffset: {x: 0, y: 110, z: 0}
   departureOffset: {x: 0, y: 140, z: 0}
   filledColor: {r: 0.36, g: 0.22, b: 0.18, a: 1}
+  pulseScale: 0.15
+  pulseDuration: 0.2
 --- !u!1 &6504058995974803383
 GameObject:
   m_ObjectHideFlags: 0

@@ -373,6 +373,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 360000319}
     - target: {fileID: 4657257740725280875, guid: 96b3c39c0c9c5d745b49c6792af06f65, type: 3}
+      propertyPath: boosterBar
+      value: 
+      objectReference: {fileID: 1162057150}
+    - target: {fileID: 4657257740725280875, guid: 96b3c39c0c9c5d745b49c6792af06f65, type: 3}
       propertyPath: gameCamera
       value: 
       objectReference: {fileID: 513128084}
@@ -392,6 +396,14 @@ PrefabInstance:
       propertyPath: outcomePanel
       value: 
       objectReference: {fileID: 336835545}
+    - target: {fileID: 4657257740725280875, guid: 96b3c39c0c9c5d745b49c6792af06f65, type: 3}
+      propertyPath: outcomePopup
+      value: 
+      objectReference: {fileID: 469584224}
+    - target: {fileID: 4657257740725280875, guid: 96b3c39c0c9c5d745b49c6792af06f65, type: 3}
+      propertyPath: popupManager
+      value: 
+      objectReference: {fileID: 469584225}
     - target: {fileID: 4657257740725280875, guid: 96b3c39c0c9c5d745b49c6792af06f65, type: 3}
       propertyPath: popupSafeArea
       value: 
@@ -604,6 +616,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &469584224 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 226504898637741785, guid: 7be0ed8aa876f244bba4b2cbb14234c6, type: 3}
+  m_PrefabInstance: {fileID: 336835541}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ca0589ef53a4804d9ad2f0dbb0811d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &469584225 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2718266468727496699, guid: 7be0ed8aa876f244bba4b2cbb14234c6, type: 3}
+  m_PrefabInstance: {fileID: 336835541}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7fff1cf53efc85479d8da934a1d0329, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &483537815
 GameObject:
   m_ObjectHideFlags: 0
@@ -797,6 +831,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 4697679633066934716, guid: 524f3be760e21364a929d502cf7bb551, type: 3}
+      propertyPath: m_Camera
+      value: 
+      objectReference: {fileID: 513128084}
     - target: {fileID: 5256126521553881891, guid: 524f3be760e21364a929d502cf7bb551, type: 3}
       propertyPath: m_Name
       value: Board
@@ -912,6 +950,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 786f90b5bf728ff4cb678fb972c4cb18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1162057150 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3758689233581624639, guid: 976c8c07723418c4892b990d4e65e552, type: 3}
+  m_PrefabInstance: {fileID: 360000317}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948c3ab3df2136c41b7c744485bd301e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1001 &1673135874

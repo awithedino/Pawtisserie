@@ -16,6 +16,9 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Move markers for the cat's actions.")] private CatView cat;
         [SerializeField, Tooltip("Hand, labels and outcome panel.")] private GameHud hud;
         [SerializeField, Tooltip("Optional separate outcome panel view.")] private OutcomePanelView outcomePanel;
+        [SerializeField, Tooltip("Booster buttons in the HUD.")] private BoosterBarView boosterBar;
+        [SerializeField, Tooltip("Shared popup stack and dim.")] private PopupManager popupManager;
+        [SerializeField, Tooltip("Managed outcome popup.")] private UiPopup outcomePopup;
         [SerializeField, Tooltip("Shared world/UI orthographic camera.")] private Camera gameCamera;
         [SerializeField, Tooltip("HUD canvas scaler; switched to height matching together with the camera on short screens.")] private CanvasScaler canvasScaler;
         [SerializeField, Tooltip("HUD content root fitted to the screen safe area.")] private RectTransform safeArea;
@@ -26,11 +29,13 @@ namespace Paw.Runtime
         private readonly PointerGesture gesture = new PointerGesture();
         private readonly EventCursor cursor = new EventCursor();
         private readonly SimClock clock = new SimClock();
+        private readonly OutcomePanelClock outcomeClock = new OutcomePanelClock();
         private readonly IHapticCues haptics = new NullHapticCues();
         private Simulator sim;
         private int attempt;
         private bool started;
-        private long outcomeAt = -1;
+        private BoosterWallet wallet;
+        private int revivesUsed;
         private Cell? previousAim;
         private int previousCard = -1;
         private int previewRevision = -1;
@@ -50,6 +55,8 @@ namespace Paw.Runtime
         {
             if (hud != null) { hud.CardSelected += Select; hud.CardDown += CardDown; hud.CardMove += CardMove; hud.CardUp += CardUp; hud.BoardDown += BoardDown; hud.BoardUp += BoardUp; hud.BoardDrag += BoardMove; hud.BoardMove += BoardHover; hud.BoardExit += BoardExit; hud.Retry += Retry; hud.Next += Next; }
             if (outcomePanel != null) { outcomePanel.Retry += Retry; outcomePanel.Next += Next; }
+            if (outcomePanel != null) outcomePanel.Revive += Revive;
+            if (boosterBar != null) boosterBar.Pressed += UseBooster;
             if (started && Application.isPlaying) LoadLevel();
         }
         private void Start() { started = true; LoadLevel(); }
@@ -57,10 +64,13 @@ namespace Paw.Runtime
         {
             if (hud != null) { hud.CardSelected -= Select; hud.CardDown -= CardDown; hud.CardMove -= CardMove; hud.CardUp -= CardUp; hud.BoardDown -= BoardDown; hud.BoardUp -= BoardUp; hud.BoardDrag -= BoardMove; hud.BoardMove -= BoardHover; hud.BoardExit -= BoardExit; hud.Retry -= Retry; hud.Next -= Next; }
             if (outcomePanel != null) { outcomePanel.Retry -= Retry; outcomePanel.Next -= Next; }
+            if (outcomePanel != null) outcomePanel.Revive -= Revive;
+            if (boosterBar != null) boosterBar.Pressed -= UseBooster;
+            if (popupManager != null) popupManager.CloseAll();
             if (draggedCard != null) draggedCard.EndDragVisual(); draggedCard = null;
             if (board != null) board.Clear(); if (cat != null) cat.Clear(); sim = null; gesture.Cancel(); ResetPresentationState(); clock.Reset();
         }
-        private void ResetPresentationState() { previousAim = null; previousCard = -1; previewRevision = -1; outcomeAt = -1; }
+        private void ResetPresentationState() { previousAim = null; previousCard = -1; previewRevision = -1; outcomeClock.Reset(); }
         private void OnApplicationFocus(bool focused) { clock.Focus(focused); if (!focused) CancelAim(); }
 
         public void PreviewLevel(int index)
@@ -75,9 +85,14 @@ namespace Paw.Runtime
             FitCamera();
             var level = PrototypeLevels.Create(levelIndex);
             uint seed = unchecked((uint)(levelIndex * 73856093) ^ (uint)(attempt * 19349663));
-            sim = new Simulator(level, config.CreateSimulationConfig(), seed, config.CreateInventory());
+            wallet = Application.isPlaying ? SessionInventory.GetOrCreate(config.CreateInventory()) : new BoosterWallet(config.CreateInventory());
+            sim = new Simulator(level, config.CreateSimulationConfig(), seed, wallet.Snapshot());
+            revivesUsed = 0;
             clock.Reset(); gesture.Cancel(); cursor.Reset(sim); ResetPresentationState();
-            board.Initialize(sim, config); cat.Initialize(config); hud.HideOutcome(); if (outcomePanel != null) outcomePanel.Hide(); hud.Aim(null); hud.Render(sim, -1, config);
+            bool hadPopup = popupManager != null && popupManager.IsOpen;
+            if (popupManager != null) popupManager.CloseAll();
+            board.Initialize(sim, config); cat.Initialize(config); hud.HideOutcome(); if (outcomePanel != null && !hadPopup) outcomePanel.Hide(); hud.Aim(null); hud.Render(sim, -1, config);
+            RenderBoosters();
         }
         public void Retry() { attempt++; LoadLevel(); }
         public void Next()
@@ -100,9 +115,14 @@ namespace Paw.Runtime
                 if (CanInput && mouseOverBoardArea && !gesture.HasCapture && gesture.SelectedIndex >= 0)
                     SetPreview(CellAt(lastMousePosition));
             }
-            if (outcomeAt >= 0 && sim.IsSettled && time >= outcomeAt + config.PanelDelay && !hud.PanelVisible)
-            { if (outcomePanel != null) { outcomePanel.Show(sim.CurrentOutcome, levelIndex); hud.SetExternalPanelVisible(true); } else hud.ShowOutcome(sim.CurrentOutcome, levelIndex); hud.Render(sim, -1, config); }
-            if (Input.GetKeyDown(KeyCode.Escape)) { CancelAim(); return; }
+            if (!hud.PanelVisible && outcomeClock.IsDue(time, sim.IsSettled, config.PanelDelay, config.OverflowPanelDelay, config.SettledFailPanelDelay))
+            {
+                bool canRevive = config.RevivesPerAttempt == 0 || revivesUsed < config.RevivesPerAttempt;
+                if (outcomePanel != null) { outcomePanel.Show(sim.CurrentOutcome, levelIndex, canRevive); hud.SetExternalPanelVisible(true); if (popupManager != null && outcomePopup != null) popupManager.Open(outcomePopup); }
+                else hud.ShowOutcome(sim.CurrentOutcome, levelIndex);
+                hud.Render(sim, -1, config); RenderBoosters();
+            }
+            if (Input.GetKeyDown(KeyCode.Escape)) { if (popupManager != null && popupManager.Back()) return; CancelAim(); return; }
         }
         private void FitCamera()
         {
@@ -229,6 +249,27 @@ namespace Paw.Runtime
             haptics.Play(HapticCue.Drop);
             CancelAim(); DrainEvents(); hud.Render(sim, -1, config); return true;
         }
+        private void RenderBoosters() { if (boosterBar != null && sim != null) boosterBar.Render(sim, hud.PanelVisible, config.SimulateRewardedAds); }
+        private void UseBooster(BoosterKind kind)
+        {
+            if (sim == null || hud.PanelVisible) return;
+            sim.AdvanceTo(clock.Time);
+            bool granting = sim.GetInventory(kind) == 0;
+            bool accepted = granting ? config.SimulateRewardedAds && sim.TryGrantBooster(kind, out _) : sim.TryUseBooster(kind, out _);
+            if (!accepted) { if (boosterBar != null) boosterBar.Refuse(kind, config.ReducedMotion); return; }
+            if (!granting && kind == BoosterKind.Shuffle) CancelAim();
+            wallet.CopyFrom(sim); DrainEvents(); hud.Render(sim, gesture.SelectedIndex, config); RenderBoosters();
+            if (!granting && kind == BoosterKind.Shuffle) for (int i = 0; i < sim.HandCount; i++) hud.Deal(i);
+        }
+        private void Revive()
+        {
+            if (sim == null || !hud.PanelVisible || (config.RevivesPerAttempt > 0 && revivesUsed >= config.RevivesPerAttempt)) return;
+            sim.AdvanceTo(clock.Time);
+            if (!sim.TryRevive(out _)) return;
+            revivesUsed++; if (popupManager != null && outcomePopup != null) popupManager.Close(outcomePopup);
+            if (outcomePanel != null && (popupManager == null || outcomePopup == null)) outcomePanel.Hide(); hud.HideOutcome();
+            DrainEvents(); hud.Render(sim, -1, config); RenderBoosters();
+        }
         private void CancelAim()
         {
             if (draggedCard != null) draggedCard.EndDragVisual(); draggedCard = null;
@@ -253,11 +294,12 @@ namespace Paw.Runtime
             while (cursor.TryRead(out SimEvent item))
             {
                 board.Apply(item); cat.Apply(item); changed = true;
+                outcomeClock.Observe(item);
                 if (item.Kind == SimEventKind.CanExploded) haptics.Play(HapticCue.Explosion);
                 if (item.Kind == SimEventKind.CardDealt) dealt = true;
-                if (item.Kind == SimEventKind.Outcome) { outcomeAt = item.Time; gesture.Cancel(); board.ClearPreview(); }
+                if (item.Kind == SimEventKind.Outcome) { gesture.Cancel(); board.ClearPreview(); }
             }
-            if (changed) hud.Render(sim, gesture.SelectedIndex, config);
+            if (changed) { hud.Render(sim, gesture.SelectedIndex, config); RenderBoosters(); }
             if (dealt && sim.HandCount > 0) hud.Deal(sim.HandCount - 1);
         }
         public void PreviewAdvanceTo(long time)

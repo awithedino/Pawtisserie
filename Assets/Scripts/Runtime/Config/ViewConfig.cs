@@ -20,6 +20,12 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Flop landing time in seconds."), Min(0)] private float flopLanding = .36f;
         [SerializeField, Tooltip("Tray gravity travel time in seconds."), Min(0)] private float gravityTravel = .25f;
         [SerializeField, Tooltip("Seconds between the outcome and its panel (GDD §8.1: win panel 0.7 s)."), Min(0)] private float panelDelay = .7f;
+        [SerializeField, Tooltip("Seconds after an overflow pastry lands before the offer."), Min(0)] private float overflowPanelDelay = .55f;
+        [SerializeField, Tooltip("Seconds after a settled failure before the offer."), Min(0)] private float settledFailPanelDelay;
+        [SerializeField, Tooltip("Simulate watching a rewarded ad for an empty booster.")] private bool simulateRewardedAds = true;
+        [SerializeField, Tooltip("Revives allowed per attempt; zero means unlimited."), Min(0)] private int revivesPerAttempt;
+        [SerializeField, Tooltip("Seconds for a pastry to hop into the stash."), Min(0)] private float stashHop = .32f;
+        [SerializeField, Tooltip("Height of a pastry's stash hop."), Min(0)] private float stashArc = 34;
         [SerializeField, Tooltip("Seconds for storage compaction."), Min(0)] private float compactionTime = .18f;
         [SerializeField, Tooltip("Starting Shuffle inventory for prototype runs."), Min(0)] private int startingShuffle = 2;
         [SerializeField, Tooltip("Starting Call box inventory for prototype runs."), Min(0)] private int startingCallBox = 2;
@@ -38,12 +44,19 @@ namespace Paw.Runtime
         public bool ReducedMotion => reducedMotion;
         public int PoolSize => poolSize;
         public long PanelDelay => Micros(panelDelay);
+        public long OverflowPanelDelay => Micros(overflowPanelDelay);
+        public long SettledFailPanelDelay => Micros(settledFailPanelDelay);
+        public bool SimulateRewardedAds => simulateRewardedAds;
+        public int RevivesPerAttempt => revivesPerAttempt;
+        public long StashHop => Micros(stashHop);
+        public float StashArc => stashArc;
         public long CompactionTime => Micros(compactionTime);
         public Color PastryColor(int type) => pastryColors[type];
         public int[] CreateInventory() => new[] { startingShuffle, startingCallBox, startingStash };
         public SimulationConfig CreateSimulationConfig() => new SimulationConfig(Micros(tapLanding), Micros(pounceLanding), Micros(flopLanding), Micros(gravityTravel));
         public bool IsValid => boardWidth > 0 && boardHeight > 0 && cellSize > 0 && pastrySize > 0 && arcHeight >= 0 && poolSize >= 49 &&
             tapLanding >= 0 && pounceLanding >= 0 && flopLanding >= 0 && gravityTravel >= 0 && panelDelay >= 0 && compactionTime >= 0 &&
+            overflowPanelDelay >= 0 && settledFailPanelDelay >= 0 && revivesPerAttempt >= 0 && stashHop >= 0 && stashArc >= 0 &&
             startingShuffle >= 0 && startingCallBox >= 0 && startingStash >= 0 && pastryColors != null && pastryColors.Length == 4 && cardColors != null && cardColors.Length == 4;
         private static long Micros(float seconds) => (long)Math.Round((double)seconds * 1000000);
         private void OnValidate() { if (!IsValid) Debug.LogError("ViewConfig needs valid sizes, nonnegative timings, four pastry and four card colors, and at least 49 pooled views."); }

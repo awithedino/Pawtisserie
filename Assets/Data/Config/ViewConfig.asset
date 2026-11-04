@@ -25,6 +25,12 @@ MonoBehaviour:
   flopLanding: 0.36
   gravityTravel: 0.25
   panelDelay: 0.7
+  overflowPanelDelay: 0.55
+  settledFailPanelDelay: 0
+  simulateRewardedAds: 1
+  revivesPerAttempt: 0
+  stashHop: 0.32
+  stashArc: 34
   compactionTime: 0.18
   startingShuffle: 2
   startingCallBox: 2
