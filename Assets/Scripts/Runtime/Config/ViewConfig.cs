@@ -12,6 +12,8 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Logical tray cell spacing."), Min(1)] private float cellSize = 50;
         [SerializeField, Tooltip("Pastry diameter in logical units."), Min(1)] private float pastrySize = 34;
         [SerializeField, Tooltip("Height of a pastry flight arc."), Min(0)] private float arcHeight = 45;
+        [SerializeField, Tooltip("Pointer travel in density-independent pixels before dragging a card."), Min(0)] private float dragThresholdDp = 10;
+        [SerializeField, Tooltip("Reduce card and marker motion." )] private bool reducedMotion;
         [SerializeField, Tooltip("Prewarmed pastry views including the tray."), Min(1)] private int poolSize = 60;
         [SerializeField, Tooltip("Paw landing time in seconds."), Min(0)] private float tapLanding = .32f;
         [SerializeField, Tooltip("Pounce landing time in seconds."), Min(0)] private float pounceLanding = .45f;
@@ -32,6 +34,8 @@ namespace Paw.Runtime
         public float CellSize => cellSize;
         public float PastrySize => pastrySize;
         public float ArcHeight => arcHeight;
+        public float DragThresholdDp => dragThresholdDp;
+        public bool ReducedMotion => reducedMotion;
         public int PoolSize => poolSize;
         public long PanelDelay => Micros(panelDelay);
         public long CompactionTime => Micros(compactionTime);

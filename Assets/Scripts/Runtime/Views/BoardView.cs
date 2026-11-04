@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using Paw.Presentation;
 using Paw.Sim;
 using UnityEngine;
@@ -14,6 +15,8 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Pastry/can view prefab.")] private PastryView pastryPrefab;
         [SerializeField, Tooltip("Tray cell renderer prefab.")] private SpriteRenderer cellPrefab;
         [SerializeField, Tooltip("Aim badge prefab.")] private BadgeView badgePrefab;
+        [SerializeField, Tooltip("Optional nested counter and queue prefab.")] private CounterRowView counterRow;
+        [SerializeField, Tooltip("Optional nested shelf and rack prefab.")] private ShelfRackView shelfRack;
         [SerializeField, Tooltip("Three counter box views.")] private BoxLaneView[] lanes;
         [SerializeField, Tooltip("Miniature queue views.")] private BoxLaneView[] queueViews;
         [SerializeField, Tooltip("Five authored plate anchors.")] private Transform[] plateAnchors;
@@ -22,6 +25,8 @@ namespace Paw.Runtime
         [SerializeField, Tooltip("Stash visual and its anchor.")] private Transform stashAnchor;
         [SerializeField, Tooltip("Overflow anchor.")] private Transform overflowAnchor;
         [SerializeField, Tooltip("Tint of the cells the aimed move will hit.")] private Color blastColor = new Color(.96f, .77f, .33f, .85f);
+        [SerializeField, Tooltip("Rotation in degrees when a tile is pressed without a card."), Min(0)] private float emptyTapWobble = 5;
+        [SerializeField, Tooltip("Seconds for the empty-tile wobble."), Min(0)] private float emptyTapWobbleDuration = .2f;
         private readonly List<PastryView> pool = new List<PastryView>();
         private readonly List<SpriteRenderer> cells = new List<SpriteRenderer>();
         private readonly List<BadgeView> badges = new List<BadgeView>();
@@ -40,12 +45,14 @@ namespace Paw.Runtime
         private int used;
         private Color cellColor;
         public bool IsConfigured => worldLayer != null && trayAnchor != null && pastryPrefab != null && cellPrefab != null && badgePrefab != null &&
-            lanes != null && lanes.Length == 3 && queueViews != null && queueViews.Length >= 12 && plateAnchors != null && plateAnchors.Length == 5 &&
-            rackAnchors != null && rackAnchors.Length == 2 && rackVisual != null && stashAnchor != null && overflowAnchor != null;
+            (counterRow != null ? counterRow.IsConfigured : lanes != null && lanes.Length == 3 && queueViews != null && queueViews.Length >= 12) &&
+            (shelfRack != null ? shelfRack.IsConfigured : plateAnchors != null && plateAnchors.Length == 5 && rackAnchors != null && rackAnchors.Length == 2 && rackVisual != null && stashAnchor != null && overflowAnchor != null);
 
         public void Initialize(Simulator sim, ViewConfig settings)
         {
             if (!IsConfigured) throw new InvalidOperationException("BoardView has missing prefab or anchor references.");
+            if (counterRow != null) { lanes = counterRow.Lanes; queueViews = counterRow.Queue; }
+            if (shelfRack != null) { plateAnchors = shelfRack.Plates; rackAnchors = shelfRack.Rack; rackVisual = shelfRack.RackVisual; stashAnchor = shelfRack.Stash; overflowAnchor = shelfRack.Overflow; }
             config = settings; Clear();
             while (pool.Count < config.PoolSize) { var view = Instantiate(pastryPrefab, worldLayer); view.gameObject.SetActive(false); pool.Add(view); }
             while (cells.Count < 49) { var cell = Instantiate(cellPrefab, worldLayer); cell.gameObject.SetActive(false); cells.Add(cell); }
@@ -75,7 +82,7 @@ namespace Paw.Runtime
         public void Clear()
         {
             foreach (var view in pool) if (view != null) view.gameObject.SetActive(false);
-            foreach (var cell in cells) if (cell != null) cell.gameObject.SetActive(false);
+            foreach (var cell in cells) if (cell != null) { cell.transform.DOKill(); cell.transform.localRotation = Quaternion.identity; cell.gameObject.SetActive(false); }
             foreach (var badge in badges) if (badge != null) badge.gameObject.SetActive(false);
             active.Clear(); boxes.Clear(); boxTargets.Clear(); arrival.Clear(); landed.Clear(); slots.Clear();
             plates.Clear(); rack.Clear(); stash.Clear(); queue.Clear(); used = 0;
@@ -94,8 +101,18 @@ namespace Paw.Runtime
         }
         private Vector3 Local(Transform anchor) => worldLayer.InverseTransformPoint(anchor.position);
         private Vector3 CellPosition(Cell cell) { var point = mapping.Center(cell); return new Vector3((float)point.X, (float)point.Y, 0); }
+        public int Columns => mapping.Columns;
+        public Vector3 CellWorld(Cell cell) => worldLayer.TransformPoint(CellPosition(cell));
         public bool TryCell(Vector3 world, out Cell cell)
         { var point = worldLayer.InverseTransformPoint(world); return mapping.TryCell(new Point2(point.x, point.y), out cell); }
+        public void Wobble(Cell cell)
+        {
+            if (config == null || config.ReducedMotion || emptyTapWobbleDuration <= 0) return;
+            int index = cell.Row * mapping.Columns + cell.Column;
+            if (index < 0 || index >= cells.Count || cells[index] == null) return;
+            var tile = cells[index].transform; tile.DOKill(); tile.localRotation = Quaternion.identity;
+            tile.DOPunchRotation(new Vector3(0, 0, emptyTapWobble), emptyTapWobbleDuration).SetUpdate(true);
+        }
         private BoxLaneView FindLane(int id)
         { foreach (var lane in lanes) if (lane.Id == id) return lane; return null; }
 

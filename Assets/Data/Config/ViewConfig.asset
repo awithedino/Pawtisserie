@@ -17,6 +17,8 @@ MonoBehaviour:
   cellSize: 50
   pastrySize: 34
   arcHeight: 45
+  dragThresholdDp: 10
+  reducedMotion: 0
   poolSize: 60
   tapLanding: 0.32
   pounceLanding: 0.45
