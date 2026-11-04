@@ -1,0 +1,1520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body style="margin:0">
+<title>Pawtisserie</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Rubik:wght@400;500;700&display=swap">
+<style>
+/* Layout: one phone-shaped column: level pill + restart, canvas stage (box counter, box queue, display shelf, cooling rack, baking tray), fanned hand of cat-move cards, booster bar */
+:root{
+  --floor:#f6e3dc;
+  --ink:#4a2c2a;
+  --panel:#5b3a33;
+  --butter:#f6c453;
+  --muted:#9a7a70;
+  --card:#fffaf4;
+  --display:'Fredoka','Arial Rounded MT Bold',system-ui,sans-serif;
+  --body:'Rubik',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+html{touch-action:manipulation}
+[hidden]{display:none!important}
+body{background:var(--floor);color:var(--ink);font-family:var(--body);overflow:hidden}
+.app{height:100%;box-sizing:border-box;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:6px;
+  padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-block:8px}
+.top{flex:none;display:flex;align-items:center;justify-content:space-between}
+.lvl{display:flex;align-items:center;gap:7px;font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.04em;line-height:1;
+  background:var(--panel);color:#fff;padding:5px 14px 5px 6px;border-radius:999px;font-variant-numeric:tabular-nums}
+.lvl svg{width:26px;height:26px}
+.iconbtn{width:40px;height:40px;padding:0;border-radius:50%;border:2px solid var(--panel);background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.iconbtn svg{width:20px;height:20px}
+.iconbtn:active{transform:rotate(-40deg);transition:transform .15s}
+.stage{flex:1;min-height:0;position:relative}
+#game{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+.tray{flex:none;position:relative;z-index:2;height:114px;user-select:none;-webkit-user-select:none}
+.deck{position:absolute;left:0;bottom:16px;width:56px;height:84px;box-sizing:border-box;border-radius:10px;color:#fff;
+  background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.13) 0 2.5px,transparent 3px) 0 0/12px 12px,var(--panel);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:2px 2px 0 #3d2622,4px 4px 0 #9a7a70,6px 6px 0 #3d2622}
+.deck b{font-family:var(--display);font-weight:700;font-size:22px;line-height:1;font-variant-numeric:tabular-nums}
+.deck small{font-size:9px;letter-spacing:.08em;color:#e9d3cb}
+.deck.bump{animation:bump .45s ease}
+@keyframes bump{40%{transform:scale(1.15) rotate(-4deg)}}
+.bcard{position:absolute;left:0;bottom:12px;z-index:var(--z,1);width:68px;height:94px;box-sizing:border-box;border-radius:10px;border:2px solid var(--panel);
+  background:var(--card);color:var(--ink);font:inherit;padding:12px 4px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  cursor:grab;touch-action:none;translate:var(--x,0px) var(--y,0px);rotate:var(--r,0deg);transform-origin:50% 100%;
+  box-shadow:-3px 3px 0 rgba(74,44,42,.2);transition:translate .22s cubic-bezier(.2,1.25,.4,1),rotate .22s,opacity .15s,box-shadow .15s}
+.bcard::before{content:"";position:absolute;left:4px;right:4px;top:4px;height:6px;border-radius:3px;background:var(--band)}
+.bcard:hover{translate:var(--x,0px) calc(var(--y,0px) - 8px)}
+.bcard b{font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:0;line-height:1;white-space:nowrap}
+.bcard small{font-size:9.5px;color:var(--muted);line-height:1;white-space:nowrap}
+.pat{display:grid;grid-template-columns:repeat(5,7px);gap:2px}
+.pat i{width:7px;height:7px;border-radius:2px;background:rgba(74,44,42,.1)}
+.pat i.on{background:var(--band)}
+.pat i.c{background:var(--ink)}
+.bcard.sel{translate:var(--x,0px) -22px;rotate:0deg;z-index:20;box-shadow:0 0 0 3px var(--butter),0 10px 18px rgba(74,44,42,.25)}
+.bcard.lifted{opacity:.3}
+.bcard.new{animation:deal .42s cubic-bezier(.2,1.3,.5,1)}
+@keyframes deal{from{transform:translate(-110px,24px) rotate(-18deg) scale(.6);opacity:0}}
+.bcard:disabled{opacity:.55;cursor:default}
+.t-pop{--band:#ff7eb0}.t-sweep{--band:#f2a65a}.t-drill{--band:#4fb8c9}.t-box{--band:#f6c453}
+.ghost{position:fixed;left:0;top:0;margin:0;pointer-events:none;z-index:50;translate:none!important;rotate:none!important;transition:transform .12s,opacity .12s;
+  transform:rotate(-6deg) scale(1.05);box-shadow:0 12px 24px rgba(74,44,42,.3)}
+.ghost.over{opacity:.5;transform:scale(.55)}
+
+.boosters{flex:none;position:relative;z-index:3;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.boost{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 8px;border-radius:12px;border:2px solid var(--panel);
+  background:var(--card);color:var(--ink);font:inherit;font-weight:700;font-size:13px;cursor:pointer;min-width:0}
+.boost svg{flex:none;width:20px;height:20px}
+.boost span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.boost .count{position:absolute;top:-8px;right:-6px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:10px;background:var(--butter);
+  border:2px solid var(--panel);font-size:11px;display:grid;place-items:center;line-height:1;font-variant-numeric:tabular-nums}
+.boost .count.ad{background:#3fb37f;color:#fff;font-size:9px;letter-spacing:.04em}
+.boost.armed{background:var(--butter);box-shadow:0 0 0 3px rgba(246,196,83,.45)}
+.boost:disabled{opacity:.45;cursor:default}
+
+button:focus-visible{outline:3px solid #4fb8c9;outline-offset:2px}
+.panel{position:absolute;inset:0;display:grid;place-items:center;background:rgba(74,44,42,.45)}
+.card{width:calc(100% - 32px);max-width:300px;box-sizing:border-box;background:var(--card);border-radius:18px;padding:20px;
+  border-top:6px solid #ff7eb0;box-shadow:0 14px 34px rgba(74,44,42,.28)}
+.card h2{margin:0 0 6px;font-family:var(--display);font-size:24px;font-weight:700;text-wrap:balance}
+.card p{margin:0 0 16px;font-size:14px;line-height:1.45;color:#6b4a43}
+.btns{display:flex;flex-direction:column;gap:8px}
+.btn{font:inherit;font-weight:700;font-size:14px;padding:11px 14px;border-radius:12px;border:2px solid var(--panel);background:#fff;color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--panel);color:#fff}
+.btn .ad{margin-left:8px;padding:2px 6px;border-radius:4px;background:var(--butter);color:var(--ink);font-size:10px;font-weight:700;letter-spacing:.06em;vertical-align:1px}
+.toast{position:absolute;left:50%;top:40%;transform:translateX(-50%);max-width:90%;background:var(--panel);color:#fff;padding:8px 12px;border-radius:12px;
+  font-size:13px;font-weight:600;text-align:center;pointer-events:none;box-shadow:0 6px 16px rgba(74,44,42,.2)}
+.coach{position:absolute;left:8px;right:8px;top:0;display:flex;align-items:center;gap:10px;padding:9px 10px 9px 9px;border-radius:16px;
+  background:var(--card);border:2px solid var(--panel);box-shadow:0 6px 16px rgba(74,44,42,.18);font-size:13.5px;line-height:1.35;font-weight:500}
+.coach svg{flex:none;width:34px;height:34px}
+.coach p{margin:0;flex:1;min-width:0}
+.coach b{font-family:var(--display);font-weight:700}
+.coach button{flex:none;font:inherit;font-size:12px;font-weight:600;color:var(--muted);background:none;border:0;padding:6px;cursor:pointer;text-decoration:underline}
+.bcard.glow{animation:glow 1s ease-in-out infinite}
+@keyframes glow{50%{box-shadow:0 0 0 4px var(--butter),0 0 18px 6px rgba(246,196,83,.6)}}
+.finger{position:fixed;left:0;top:0;width:46px;height:46px;pointer-events:none;z-index:60;margin:-4px 0 0 -14px}
+.finger svg{width:100%;height:100%;animation:tapbob 1s ease-in-out infinite;transform-origin:30% 10%;filter:drop-shadow(0 3px 3px rgba(74,44,42,.35))}
+.finger::before{content:"";position:absolute;left:6px;top:-4px;width:18px;height:18px;border-radius:50%;border:3px solid var(--butter);animation:ripple 1s ease-out infinite}
+@keyframes tapbob{0%,100%{transform:translate(0,0)}45%{transform:translate(0,7px) scale(.92)}}
+@keyframes ripple{0%,40%{transform:scale(.4);opacity:0}50%{opacity:1}100%{transform:scale(1.8);opacity:0}}
+@media (max-width:420px){.bcard small{display:none}}
+@media (prefers-reduced-motion: reduce){.bcard,.ghost{transition:none}.bcard.new,.deck.bump,.bcard.glow,.finger svg,.finger::before{animation:none}}
+</style>
+
+<div class="app">
+  <div class="top">
+    <div class="lvl">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#fffaf4"/><path d="M7 11 9 4l6 5M25 11l-2-7-6 5" fill="#f2a65a"/><ellipse cx="16" cy="18" rx="10" ry="8.5" fill="#f2a65a"/><path d="M11.5 17q1.5-1.6 3 0M17.5 17q1.5-1.6 3 0" stroke="#4a2c2a" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M15 20.2h2l-1 1.2z" fill="#ff9fb5"/></svg>
+      <span id="lvl">LEVEL 1</span>
+    </div>
+    <button class="iconbtn" id="restart" type="button" aria-label="Restart level" title="Restart level">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+  </div>
+  <div class="stage" id="stage">
+    <canvas id="game" aria-label="Bakery board: pastry boxes, display shelf and baking tray"></canvas>
+    <div class="coach" id="coach" hidden>
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#ffe3d2"/><path d="M7 11 9 4l6 5M25 11l-2-7-6 5" fill="#f2a65a"/><ellipse cx="16" cy="18" rx="10" ry="8.5" fill="#f2a65a"/><path d="M11.5 17q1.5-1.6 3 0M17.5 17q1.5-1.6 3 0" stroke="#4a2c2a" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M15 20.2h2l-1 1.2z" fill="#ff9fb5"/></svg>
+      <p id="coachText" aria-live="polite"></p>
+      <button type="button" id="coachSkip">Skip</button>
+    </div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="panel" id="panel" hidden>
+      <div class="card" role="dialog" aria-modal="true" aria-labelledby="ptitle">
+        <h2 id="ptitle"></h2>
+        <p id="pbody"></p>
+        <div class="btns" id="pbtns"></div>
+      </div>
+    </div>
+  </div>
+  <div class="finger" id="finger" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="#fffaf4" stroke="#4a2c2a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V9.5a2 2 0 0 0-4 0V10"/><path d="M14 10V8.5a2 2 0 0 0-4 0v1"/><path d="M10 9.5V4a2 2 0 0 0-4 0v10l-1.6-1.6a2 2 0 0 0-2.8 2.8l3.6 3.6C6.7 20.3 8.4 22 12 22h2a8 8 0 0 0 8-8v-3a2 2 0 0 0-4 0"/></svg></div>
+  <div class="tray" id="tray"><div class="deck" id="deck"></div></div>
+  <div class="boosters" id="boosters">
+    <button type="button" class="boost" id="bShuffle" title="Shuffle: re-roll every card in your hand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#4a2c2a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h3.5c4 0 6 10 10 10H21"/><path d="M3 17h3.5c1.6 0 2.8-1.6 3.9-3.5M13.6 10.5C14.7 8.6 15.9 7 17.5 7H21"/><path d="m18 4 3 3-3 3M18 14l3 3-3 3"/></svg>
+      <span>Shuffle</span><b class="count">2</b>
+    </button>
+    <button type="button" class="boost" id="bCall" title="Call the pastry box your plates need most">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16v11H4z" fill="#fffaf4" stroke="#4a2c2a" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 6.5h18V9H3z" fill="#ff7eb0" stroke="#4a2c2a" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 6.5V20" stroke="#ff7eb0" stroke-width="2.4"/><path d="M12 6.5c-2-3-5-3-4.5-1s4.5 1 4.5 1 2.5-.4 4.5-1-2.5-2-4.5 1" fill="none" stroke="#4a2c2a" stroke-width="1.3"/></svg>
+      <span>Call box</span><b class="count">2</b>
+    </button>
+    <button type="button" class="boost" id="bStash" title="Stash: move every pastry on the plates into the tin; they go to their box first">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11" rx="3" fill="#9fd3c7" stroke="#4a2c2a" stroke-width="1.6"/><rect x="2.5" y="6" width="19" height="4.5" rx="2" fill="#6fb7a6" stroke="#4a2c2a" stroke-width="1.6"/><circle cx="12" cy="14.5" r="2.4" fill="#fffaf4" stroke="#4a2c2a" stroke-width="1.2"/></svg>
+      <span>Stash</span><b class="count">1</b>
+    </button>
+  </div>
+</div>
+
+<script>
+(() => {
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const stage = document.getElementById('stage');
+const tray = document.getElementById('tray');
+const deckEl = document.getElementById('deck');
+const W = 400, CELL = 50, TRUCK_Y = 12, SOFT = 28, SOFT_CAP = 2, HAND = 5, BASE_CAP = 5, TAU = Math.PI*2;
+// Vertical layout is recomputed per screen: spare height grows the box queue and the gaps.
+let H = 632, QUEUE_CY = 117, QH = 34, SHELF_Y = 140, SHELF_CY = 170, SOFT_Y = 206, SOFT_CY = 223, GRID_TOP = 262;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse = matchMedia('(pointer: coarse)').matches;
+const FONT = (px, w = 700) => `${w} ${px}px Fredoka, 'Arial Rounded MT Bold', system-ui, sans-serif`;
+
+// Each pastry has its own color AND its own silhouette, so it reads even without color.
+const PASTRY = [
+  { name:'Strawberry donut',  main:'#ff7eb0', dark:'#c94f82', light:'#ffc6dc' },
+  { name:'Blueberry macaron', main:'#6aa8f0', dark:'#3b6fb8', light:'#c3dcfb' },
+  { name:'Mint cupcake',      main:'#4fc79a', dark:'#2a8c66', light:'#b3ead4' },
+  { name:'Butter croissant',  main:'#f2a93b', dark:'#a8651a', light:'#fbd79a' },
+];
+const CAT = { fur:'#f2a65a', dark:'#c9772f', belly:'#fff1e0', pink:'#ff9fb5', ink:'#4a2c2a' };
+const RACK = { bar:'#b9aeab', dark:'#8f8481', light:'#e3dcda' };
+const CARDS = {
+  pop:   { name:'TAP',    hint:'paw · plus',   band:'#ff7eb0' },
+  sweep: { name:'SWIPE',  hint:'tail · row',   band:'#f2a65a' },
+  drill: { name:'POUNCE', hint:'column',       band:'#4fb8c9' },
+  box:   { name:'FLOP',   hint:'belly · 3×3',  band:'#f6c453' },
+};
+// gifts: box number (in arrival order, 0 = first box at the counter) -> card it carries
+const LEVELS = [
+  // Level 0: scripted tutorial. D = donut, M = macaron. TAP the center sends 5 donuts home,
+  // then two SWIPEs on the bottom rows finish the macaron box and the last donut box.
+  { tutorial:true, cols:3, rows:3, layout:['MDM','DDD','MDD'], boxes:[0,1,0], deck:['pop','sweep','sweep'], gifts:{} },
+  { cols:6, rows:6, colors:3, tnt:0, chained:0, seed:7,
+    deck:['pop','pop','sweep','pop','drill','pop','sweep','pop'], gifts:{ 2:'sweep', 5:'pop', 8:'box', 10:'pop' } },
+  { cols:7, rows:6, colors:4, tnt:3, chained:4, seed:19,
+    deck:['pop','box','pop','sweep','drill','pop','box','sweep'], gifts:{ 3:'drill', 6:'box', 9:'pop', 11:'sweep' } },
+  { cols:7, rows:7, colors:4, tnt:4, chained:8, seed:42,
+    deck:['pop','sweep','box','pop','drill','box','sweep','pop'], gifts:{ 2:'pop', 5:'box', 8:'sweep', 11:'drill', 13:'pop' } },
+];
+const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
+
+let levelIdx, L, cols, rows, gx, grid, lanes, queue, shelf, soft, capacity, overflow;
+let flyers, droppers, afterfx, particles, rings, beams, texts, events, now = 0, state, shake = 0, softOpen = 0, settled = true;
+let hand, draw, selected = null, hover = null, drag = null, cardSeq = 0, prevIds = new Set();
+let aim = null, aimPointer = null;
+let tut = null;   // tutorial state while Level 0 runs: { step, pending }
+const boosters = { shuffle:2, call:2, stash:1 };
+let stash = [], stashShow = 0, express = null;
+let toastShown = {}, overflowShown = false;
+let dpr = 1, scale = 1, ox = 0, oy = 0;
+
+// ---------- helpers ----------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function shuffle(a, rng){for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+const lerp = (a,b,t) => a + (b-a)*t;
+const rand = (a,b) => a + Math.random()*(b-a);
+const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2;
+function buzz(ms){ try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e){} }
+function schedule(d, fn){ events.push({ at: now + d, fn }); }
+function rr(x,y,w,h,r){
+  ctx.beginPath();
+  if (ctx.roundRect) { ctx.roundRect(x,y,w,h,r); return; }
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+function ell(x, y, rx, ry, fill){ ctx.fillStyle = fill; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); ctx.fill(); }
+const laneX = i => 10 + i*128;
+const truckX = i => laneX(i) + 10;
+const slotSize = () => Math.min(48, Math.floor((W - 20 - (capacity-1)*6) / capacity));
+function shelfLeft(){ const S = slotSize(); return (W - (capacity*S + (capacity-1)*6))/2; }
+const slotX = i => shelfLeft() + i*(slotSize()+6) + slotSize()/2;
+const softLeft = () => (W - (SOFT_CAP*SOFT + (SOFT_CAP-1)*6))/2;
+const softX = i => softLeft() + i*(SOFT+6) + SOFT/2;
+const cellX = c => gx + c*CELL + 25;
+const cellY = r => GRID_TOP + r*CELL + 25;
+const card = type => ({ type, id: ++cardSeq });
+
+function shapeCells(type, r, c){
+  const out = [];
+  const add = (r2, c2) => { if (r2 >= 0 && r2 < rows && c2 >= 0 && c2 < cols) out.push([r2, c2]); };
+  if (type === 'pop'){ add(r,c); for (const [dr,dc] of D4) add(r+dr, c+dc); }
+  else if (type === 'sweep'){ for (let k = 0; k < cols; k++) add(r, k); }
+  else if (type === 'drill'){ for (let k = 0; k < rows; k++) add(k, c); }
+  else if (type === 'box'){ for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) add(r+dr, c+dc); }
+  return out;
+}
+
+// ---------- level setup ----------
+function newDock(item){ return { color:item.color, gift:item.gift, need:3, reserved:0, filled:0, spots:[false,false,false], state:'arriving', oy:-110, sp:0, bounce:0, closed:false }; }
+
+function loadLevel(i){
+  levelIdx = i; L = LEVELS[i];
+  const rng = mulberry32(L.seed);
+  cols = L.cols; rows = L.rows; gx = (W - cols*CELL)/2;
+  layout();
+  if (L.tutorial){ loadTutorial(); return; }
+  tut = null;
+  const crates = cols*rows - L.tnt, units = crates/3;
+  const per = Array.from({length:L.colors}, () => Math.floor(units/L.colors));
+  for (let c = 0; c < units % L.colors; c++) per[c]++;
+  const colorList = [];
+  per.forEach((u,c) => { for (let k = 0; k < u*3; k++) colorList.push(c); });
+  shuffle(colorList, rng);
+
+  const cells = [];
+  for (let r = 1; r < rows; r++) for (let c = 0; c < cols; c++) cells.push([r,c]);
+  shuffle(cells, rng);
+  const tntSet = new Set();
+  for (const [r,c] of cells){
+    if (tntSet.size >= L.tnt) break;
+    if (D4.some(([dr,dc]) => tntSet.has((r+dr)+','+(c+dc)))) continue;
+    tntSet.add(r+','+c);
+  }
+
+  grid = []; let ci = 0; const crateEnts = [];
+  for (let r = 0; r < rows; r++){
+    const row = [];
+    for (let c = 0; c < cols; c++){
+      const e = tntSet.has(r+','+c) ? { kind:'tnt' } : { kind:'crate', color: colorList[ci++], chain:0 };
+      if (e.kind === 'crate') crateEnts.push(e);
+      e.x = cellX(c); e.y = cellY(r) - 480 - (rows-1-r)*26; e.vy = 0; e.squash = 0; e.hit = 0;
+      row.push(e);
+    }
+    grid.push(row);
+  }
+  shuffle(crateEnts, rng).slice(0, L.chained).forEach(e => e.chain = 1);
+
+  const order = [];
+  per.forEach((u,c) => { for (let k = 0; k < u; k++) order.push(c); });
+  shuffle(order, rng);
+  for (let k = 1; k < 3; k++){
+    const head = order.slice(0,k);
+    if (head.includes(order[k])){
+      const j = order.findIndex((q,idx) => idx > k && !head.includes(q));
+      if (j > 0) [order[k], order[j]] = [order[j], order[k]];
+    }
+  }
+  queue = order.map((color, idx) => ({ color, gift: L.gifts[idx] || null }));
+  lanes = [0,1,2].map(i => { if (!queue.length) return null; const d = newDock(queue.shift()); d.oy = -110 - i*40; return d; });
+
+  capacity = BASE_CAP; shelf = []; soft = []; overflow = []; softOpen = 0; stash = []; stashShow = 0; express = null;
+  flyers = []; droppers = []; afterfx = []; particles = []; rings = []; beams = []; texts = []; events = [];
+  draw = L.deck.map(card); hand = draw.splice(0, HAND); selected = null; aim = null; aimPointer = null; prevIds = new Set();
+  state = 'play'; overflowShown = false;
+  document.getElementById('lvl').textContent = `LEVEL ${i}`;
+  hidePanel(); renderHand();
+}
+function loadTutorial(){
+  const code = { D:0, M:1, C:2, R:3 };
+  grid = L.layout.map((line, r) => [...line].map((ch, c) => ({ kind:'crate', color: code[ch], chain:0, x: cellX(c), y: cellY(r) - 420 - (rows-1-r)*26, vy:0, squash:0, hit:0 })));
+  queue = L.boxes.map(color => ({ color, gift:null }));
+  lanes = [0,1,2].map(i => { if (!queue.length) return null; const d = newDock(queue.shift()); d.oy = -110 - i*40; return d; });
+  capacity = BASE_CAP; shelf = []; soft = []; overflow = []; softOpen = 0; stash = []; stashShow = 0; express = null;
+  flyers = []; droppers = []; afterfx = []; particles = []; rings = []; beams = []; texts = []; events = [];
+  draw = L.deck.map(card); hand = draw.splice(0, HAND); selected = null; aim = null; aimPointer = null; prevIds = new Set();
+  state = 'play'; overflowShown = false;
+  tut = { step: 1, pending: false };
+  document.getElementById('lvl').textContent = 'TUTORIAL';
+  hidePanel(); renderHand();
+}
+// Which tiles the current tutorial step accepts, and which card it wants.
+function tutCells(){
+  if (!tut) return null;
+  if (tut.step === 1) return [[1,1]];
+  if (tut.step === 2) return [[1,0],[1,1],[1,2]];
+  return null;
+}
+const tutCard = () => tut ? (tut.step === 1 ? 'pop' : tut.step === 2 ? 'sweep' : null) : null;
+function tutAllows(cell){
+  const cs = tutCells();
+  return !cs || cs.some(([r, c]) => r === cell.r && c === cell.c);
+}
+
+// ---------- core mechanics ----------
+function findEnt(ent){
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (grid[r][c] === ent) return { r, c };
+  return null;
+}
+function applyGravity(){
+  for (let c = 0; c < cols; c++){
+    const stack = [];
+    for (let r = rows-1; r >= 0; r--) if (grid[r][c]) stack.push(grid[r][c]);
+    for (let r = rows-1, k = 0; r >= 0; r--, k++) grid[r][c] = stack[k] || null;
+  }
+}
+function findDock(color){
+  for (let i = 0; i < 3; i++){
+    const d = lanes[i];
+    if (d && d.state === 'ready' && d.color === color && d.reserved < d.need)
+      return { kind:'dock', dock:d, lane:i, k: d.reserved++ };
+  }
+  return null;
+}
+// Where a shelf item belongs right now. Items are looked up by identity, so
+// compaction and rack-to-shelf moves retarget pastries that are still in the air.
+const tinX = () => shelfLeft() + capacity*slotSize() + (capacity-1)*6 + 14;
+function stashPos(i){
+  const k = Math.min(i, 3), x0 = tinX();
+  return { x: x0 + 14 + (k % 2)*24, y: SHELF_CY - 9 + Math.floor(k/2)*22, s: 20 };
+}
+function itemTarget(it){
+  let j = stash.indexOf(it); if (j >= 0) return stashPos(j);
+  let i = shelf.indexOf(it); if (i >= 0) return { x: slotX(i), y: SHELF_CY - 3, s: slotSize() - 8 };
+  i = soft.indexOf(it); if (i >= 0) return { x: softX(i), y: SOFT_CY - 2, s: 26 };
+  return { x: it.px ?? W/2, y: it.py ?? SHELF_CY, s: it.s ?? 40 };
+}
+function destPos(dest){
+  if (dest.kind === 'dock') return { x: truckX(dest.lane) + 20 + dest.k*32, y: TRUCK_Y + dest.dock.oy + 44, s: 28 };
+  if (dest.kind === 'item') return itemTarget(dest.item);
+  if (dest.kind === 'express') return express ? { x: express.x - 30 + (dest.k % 5)*15, y: express.y - 4, s: 22 } : { x: W/2, y: SHELF_CY, s: 22 };
+  return { x: softX(SOFT_CAP-1) + 40 + dest.idx*34, y: SOFT_CY, s: 30 };
+}
+function launch(color, sx, sy, s0, dest, dur, arc){
+  flyers.push({ color, sx, sy, s0, dest, t:0, dur: dur || rand(.5,.66), arc: arc ?? rand(55,95), spin: rand(-6,6) });
+}
+function launchCrate(ent){
+  let dest = findDock(ent.color);
+  if (!dest){
+    const item = { color: ent.color, landed:false };
+    if (shelf.length < capacity){ shelf.push(item); dest = { kind:'item', item }; }
+    else if (soft.length < SOFT_CAP){
+      soft.push(item); dest = { kind:'item', item };
+      if (soft.length === 1) texts.push({ x: W/2, y: SOFT_Y + 4, text:'COOLING RACK', t:0, life:.9, color: RACK.light });
+    } else {
+      dest = { kind:'over', idx: overflow.length };
+      overflow.push({ color: ent.color, landed:false });
+      if (state === 'play'){ state = 'lost'; cancelDrag(); }
+    }
+  }
+  launch(ent.color, ent.x, ent.y, 44, dest);
+  dust(ent.x, ent.y, PASTRY[ent.color].light, 5);
+}
+function hitCrate(ent, r, c){
+  if (ent.chain > 0){
+    ent.chain--; ent.hit = 1;
+    sparks(ent.x, ent.y, ['#e8f6ff','#ffffff','#c7e6f7'], 12, 200);
+    texts.push({ x: ent.x, y: ent.y - 18, text:'CLINK', t:0, life:.7, color:'#e8f6ff' });
+  } else {
+    grid[r][c] = null;
+    launchCrate(ent);
+  }
+}
+function explodeAt(r, c, type, x, y){
+  boomFx(type, r, c, x, y); buzz(type === 'pop' ? 20 : 35);
+  for (const [r2, c2] of shapeCells(type, r, c)){
+    const t = grid[r2][c2]; if (!t) continue;
+    if (t.kind === 'tnt'){
+      if (!t.primed){
+        t.primed = true;
+        schedule(.2, () => {
+          const p = findEnt(t); if (!p) return;
+          grid[p.r][p.c] = null;
+          creamFx(t.x, t.y);
+          explodeAt(p.r, p.c, 'pop', t.x, t.y);
+        });
+      }
+    } else hitCrate(t, r2, c2);
+  }
+  schedule(.12, applyGravity);
+  const big = type !== 'pop';
+  shake = Math.min(14, shake + (big ? 9 : 5)) * (reduceMotion ? .25 : 1);
+}
+// A card is one of the cat's moves; the cat (or its paw or tail) performs it, then the impact resolves.
+function useCard(i, cell){
+  const cd = hand[i]; if (!cd) return;
+  hand.splice(i, 1);
+  if (draw.length) hand.push(draw.shift());
+  selected = null; aim = null; aimPointer = null; buzz(15);
+  if (tut && tut.step < 3) tut.pending = true;
+  const tx = cellX(cell.c), ty = cellY(cell.r);
+  const d = { type: cd.type, r: cell.r, c: cell.c, x: tx, y: ty, vy: 0, t: 0, landed:false, fuse:0 };
+  if (cd.type === 'pop') d.y = ty - 130;
+  if (cd.type === 'drill') d.y = GRID_TOP - 120;
+  if (cd.type === 'box') d.y = ty - 190;
+  droppers.push(d);
+  renderHand();
+}
+function land(f){
+  const d = f.dest;
+  if (d.kind === 'dock'){
+    const dk = d.dock;
+    dk.spots[d.k] = true; dk.filled++; dk.bounce = 1;
+    const p = destPos(d); dust(p.x, p.y, PASTRY[f.color].light, 6);
+    if (dk.filled === dk.need) closeDock(dk, .3);
+  } else if (d.kind === 'express'){
+    if (express){ express.got++; express.bounce = 1; dust(express.x, express.y, '#fff3c4', 5); }
+  } else if (d.kind === 'item'){
+    const it = d.item, p = itemTarget(it);
+    it.landed = true; it.px = p.x; it.py = p.y; it.s = p.s;
+    dust(p.x, p.y, '#ffffff', 4);
+  } else {
+    if (express && express.state !== 'out'){ const p = destPos(d); toExpress(f.color, p.x, p.y, p.s); return; }
+    const o = overflow[d.idx];
+    if (o){ const p = destPos(d); o.landed = true; o.px = p.x; o.py = p.y; }
+    if (!overflowShown){ overflowShown = true; shake += reduceMotion ? 1 : 6; schedule(.55, () => showSpaceFail(false)); }
+  }
+}
+function closeDock(dk, delay){
+  if (dk.closing) return;
+  dk.closing = true;
+  schedule(delay, () => { dk.closed = true; dk.bounce = 1; const i = lanes.indexOf(dk); if (i >= 0) dust(truckX(i) + 52, TRUCK_Y + dk.oy + 18, '#ffffff', 8); });
+  schedule(delay + .32, () => { dk.state = 'leaving'; dk.sp = 0; });
+}
+// Boxes must match the pastries still in play. After an Express box (or any other
+// mismatch), surplus boxes leave the queue, a part-filled box at the counter closes
+// with what it has, and an empty one leaves. Gift cards move to a box that stays.
+function reconcileBoxes(){
+  const supply = {};
+  for (const row of grid) for (const e of row) if (e && e.kind === 'crate') supply[e.color] = (supply[e.color] || 0) + 1;
+  for (const it of [...stash, ...shelf, ...soft]) supply[it.color] = (supply[it.color] || 0) + 1;
+  const lostGifts = [];
+  for (let c = 0; c < PASTRY.length; c++){
+    const docks = lanes.filter(d => d && d.color === c && d.state !== 'leaving' && !d.closing);
+    let room = 0; for (const d of docks) room += d.need - d.reserved;
+    const qIdx = []; queue.forEach((q, i) => { if (q.color === c) qIdx.push(i); });
+    let excess = room + qIdx.length*3 - (supply[c] || 0);
+    for (let k = qIdx.length - 1; k >= 0 && excess >= 3; k--){
+      const q = queue.splice(qIdx[k], 1)[0];
+      if (q.gift) lostGifts.push(q.gift);
+      excess -= 3;
+    }
+    for (const d of docks){
+      if (excess <= 0) break;
+      const cut = Math.min(d.need - d.reserved, excess);
+      d.need -= cut; excess -= cut;
+      if (d.need === 0){ if (d.gift){ lostGifts.push(d.gift); d.gift = null; } d.state = 'leaving'; d.sp = 0; }
+      else if (d.filled === d.need) closeDock(d, .2);
+    }
+  }
+  for (const g of lostGifts){
+    const keep = [...lanes.filter(d => d && d.state !== 'leaving'), ...queue].find(b => !b.gift);
+    if (keep) keep.gift = g;
+    else { draw.push(card(g)); while (hand.length < HAND && draw.length) hand.push(draw.shift()); renderHand(); }
+  }
+}
+// Shelf pastries go to their box as soon as it is ready. A cleared plate makes
+// the shelf slide left, and the cooling rack refills the shelf at once.
+function pumpShelves(){
+  for (const arr of [stash, shelf, soft]){
+    for (let i = 0; i < arr.length; i++){
+      const it = arr[i];
+      if (!it.landed) continue;
+      const dest = findDock(it.color);
+      if (!dest) continue;
+      arr.splice(i, 1); i--;
+      launch(it.color, it.px, it.py, it.s, dest);
+    }
+  }
+  while (shelf.length < capacity && soft.length){
+    const it = soft.shift();
+    shelf.push(it);
+    if (it.landed){ it.landed = false; launch(it.color, it.px, it.py, it.s, { kind:'item', item: it }, .34, 30); }
+  }
+}
+function crateCount(){ let n = 0; for (const row of grid) for (const e of row) if (e && e.kind === 'crate') n++; return n; }
+// A gift box drops its card into the deck when it leaves full.
+function boxDone(d, lane){
+  if (!d.gift || state !== 'play') return;
+  draw.push(card(d.gift));
+  while (hand.length < HAND && draw.length) hand.push(draw.shift());
+  texts.push({ x: laneX(lane) + 62, y: 40, text:'+1 CARD', t:0, life:1.1, color: CARDS[d.gift].band });
+  renderHand();
+  deckEl.classList.remove('bump'); void deckEl.offsetWidth; deckEl.classList.add('bump');
+}
+function isSettled(){
+  if (events.length || flyers.length || droppers.length || express) return false;
+  for (const d of lanes) if (d && d.state !== 'ready') return false;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++){ const e = grid[r][c]; if (e && e.y < cellY(r) - .5) return false; }
+  return true;
+}
+
+// Predict where each pastry in a move would go, for the aim preview.
+function predict(type, r, c){
+  const free = {}; let shelfFree = capacity - shelf.length, softFree = SOFT_CAP - soft.length;
+  for (const d of lanes) if (d && d.state === 'ready') free[d.color] = (free[d.color] || 0) + (3 - d.reserved);
+  const marks = []; let toTruck = 0, toShelf = 0, toSoft = 0, over = 0;
+  for (const [r2, c2] of shapeCells(type, r, c)){
+    const e = grid[r2][c2]; if (!e) continue;
+    if (e.kind === 'tnt'){ marks.push({ r:r2, c:c2, k:'tnt' }); continue; }
+    if (e.chain){ marks.push({ r:r2, c:c2, k:'crack' }); continue; }
+    if (free[e.color] > 0){ free[e.color]--; toTruck++; marks.push({ r:r2, c:c2, k:'truck' }); }
+    else if (shelfFree > 0){ shelfFree--; toShelf++; marks.push({ r:r2, c:c2, k:'shelf' }); }
+    else if (softFree > 0){ softFree--; toSoft++; marks.push({ r:r2, c:c2, k:'soft' }); }
+    else { over++; marks.push({ r:r2, c:c2, k:'over' }); }
+  }
+  return { marks, toTruck, toShelf, toSoft, over };
+}
+
+// ---------- effects ----------
+const SUGAR = ['#fffaf0','#ffd6e4','#ffe9a8','#c8ecff','#ffffff'];
+function boomFx(type, r, c, x, y){
+  if (type === 'sweep') beams.push({ x0: gx, y0: cellY(r), x1: gx + cols*CELL, y1: cellY(r), t:0, life:.35, w:28 });
+  if (type === 'drill') beams.push({ x0: cellX(c), y0: GRID_TOP, x1: cellX(c), y1: GRID_TOP + rows*CELL, t:0, life:.35, w:28 });
+  if (type === 'sweep' || type === 'drill'){
+    const n = type === 'sweep' ? cols : rows;
+    for (let k = 0; k < n; k++){
+      const px = type === 'sweep' ? cellX(k) : cellX(c), py = type === 'sweep' ? cellY(r) : cellY(k);
+      sparks(px, py, SUGAR, 5, 200);
+    }
+  }
+  const big = type === 'box';
+  rings.push({ x, y, t:0, life: big ? .45 : .35, max: big ? 95 : 58 });
+  sparks(x, y, SUGAR, big ? 30 : 18, big ? 360 : 280);
+  sprinkles(x, y, big ? 16 : 8);
+  for (let i = 0; i < (big ? 10 : 6); i++){
+    const a = rand(0, TAU), sp = rand(15, 60);
+    particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - 20, g:-30, life: rand(.6,1), t:0, size: rand(9,14), grow: 22, color:'flour' });
+  }
+}
+function creamFx(x, y){
+  for (let i = 0; i < 12; i++){
+    const a = rand(0, TAU), sp = rand(80, 220);
+    particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, g: 300, life: rand(.4,.7), t:0, size: rand(4,8), grow:0, color:'#fffaf4' });
+  }
+  texts.push({ x, y: y - 20, text:'SPLAT!', t:0, life:.7, color:'#ffffff' });
+}
+function sparks(x, y, palette, n, speed){
+  for (let i = 0; i < n; i++){
+    const a = rand(0, TAU), sp = rand(speed*.35, speed);
+    particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, g: 420, life: rand(.3,.6), t:0, size: rand(2.5,4.5), grow:0, color: palette[i % palette.length] });
+  }
+}
+function sprinkles(x, y, n){
+  const cs = ['#ff7eb0','#6aa8f0','#4fc79a','#f6c453','#ffffff'];
+  for (let i = 0; i < n; i++){
+    const a = rand(0, TAU), sp = rand(120, 280);
+    particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - 60, g: 520, life: rand(.5,.8), t:0, size: rand(5,8), grow:0, color: cs[i % cs.length], rect:true, rot: rand(0,6) });
+  }
+}
+function dust(x, y, color, n){
+  for (let i = 0; i < n; i++){
+    const a = rand(0, TAU), sp = rand(30, 90);
+    particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, g: 60, life: rand(.25,.45), t:0, size: rand(2,4), grow: 2, color });
+  }
+}
+function confetti(){
+  for (let i = 0; i < 70; i++){
+    particles.push({ x: rand(20, W-20), y: rand(-40, 0), vx: rand(-40,40), vy: rand(60,180), g: 160, life: rand(1.4,2.2), t:0, size: rand(4,7), grow:0, color: PASTRY[i % 4].main, rect:true, rot: rand(0,6) });
+  }
+}
+
+// ---------- update ----------
+function update(dt){
+  now += dt;
+  for (let i = 0; i < events.length;){
+    if (events[i].at <= now){ const ev = events.splice(i,1)[0]; ev.fn(); } else i++;
+  }
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++){
+    const e = grid[r][c]; if (!e) continue;
+    const ty = cellY(r);
+    e.x = cellX(c);
+    if (e.y < ty){
+      e.vy += 2400*dt; e.y = Math.min(ty, e.y + e.vy*dt);
+      if (e.y >= ty){ e.y = ty; if (e.vy > 300) e.squash = 1; e.vy = 0; }
+    } else { e.y = ty; e.vy = 0; }
+    e.squash = Math.max(0, e.squash - dt*6);
+    e.hit = Math.max(0, e.hit - dt*2.5);
+  }
+  for (let i = droppers.length - 1; i >= 0; i--){
+    const d = droppers[i], ty = cellY(d.r);
+    if (!d.landed){
+      if (d.type === 'sweep'){
+        d.t += dt / .32;
+        if (d.t >= 1){ d.t = 1; d.landed = true; }
+      } else {
+        d.vy += (d.type === 'box' ? 3000 : 2600)*dt; d.y += d.vy*dt;
+        if (d.y >= ty){ d.y = ty; d.landed = true; d.squash = 1; dust(d.x, d.y + 14, '#ffffff', 6); }
+      }
+    } else {
+      d.fuse += dt;
+      d.squash = Math.max(0, (d.squash || 0) - dt*5);
+      if (d.fuse >= .1){
+        droppers.splice(i,1);
+        explodeAt(d.r, d.c, d.type, d.x, d.y);
+        afterfx.push({ type: d.type, x: d.x, y: d.y, r: d.r, t:0, life: .5 });
+      }
+    }
+  }
+  for (let i = afterfx.length - 1; i >= 0; i--){ afterfx[i].t += dt; if (afterfx[i].t >= afterfx[i].life) afterfx.splice(i,1); }
+  lanes.forEach((d, i) => {
+    if (!d) return;
+    if (d.state === 'arriving'){
+      d.oy += (0 - d.oy) * Math.min(1, dt*9);
+      if (d.oy > -.6){ d.oy = 0; d.state = 'ready'; }
+    } else if (d.state === 'leaving'){
+      d.sp += 1700*dt; d.oy -= d.sp*dt;
+      if (d.oy < -130){
+        lanes[i] = queue.length ? newDock(queue.shift()) : null;
+        boxDone(d, i);
+      }
+    }
+    d.bounce = Math.max(0, d.bounce - dt*4);
+  });
+  for (let i = flyers.length - 1; i >= 0; i--){
+    const f = flyers[i];
+    f.t += dt / f.dur;
+    if (f.t >= 1){ flyers.splice(i,1); land(f); }
+  }
+  pumpShelves();
+  const k = Math.min(1, dt*14);
+  stashShow += ((stash.length ? 1 : 0) - stashShow) * Math.min(1, dt*10);
+  if (express){
+    express.t += dt; express.bounce = Math.max(0, express.bounce - dt*4);
+    if (express.state === 'in'){ express.x += (express.tx - express.x)*Math.min(1, dt*10); if (Math.abs(express.x - express.tx) < 1) express.state = 'wait'; }
+    else if (express.state === 'wait'){ if (express.got >= Math.max(express.want, express.expect) && express.t > .9){ express.state = 'out'; express.sp = 0; } }
+    else { express.sp += 1600*dt; express.x += express.sp*dt; if (express.x > W + 120) express = null; }
+  }
+  for (const arr of [stash, shelf, soft]) for (const it of arr){
+    if (!it.landed) continue;
+    const p = itemTarget(it);
+    it.px += (p.x - it.px)*k; it.py += (p.y - it.py)*k; it.s += (p.s - it.s)*k;
+  }
+  for (let i = particles.length - 1; i >= 0; i--){
+    const p = particles[i];
+    p.t += dt; if (p.t >= p.life){ particles.splice(i,1); continue; }
+    p.vy += p.g*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.size += p.grow*dt;
+    if (p.rect) p.rot += dt*6;
+  }
+  for (const arr of [rings, beams, texts]) for (let i = arr.length - 1; i >= 0; i--){ arr[i].t += dt; if (arr[i].t >= arr[i].life) arr.splice(i,1); }
+  shake = Math.max(0, shake - dt*40);
+
+  settled = isSettled();
+  const want = (!settled && state === 'play') || soft.length ? 1 : 0;
+  softOpen += (want - softOpen) * Math.min(1, dt*(want ? 12 : 6));
+
+  if (state === 'play' && settled && tut && tut.pending){
+    tut.pending = false; tut.step++; renderHand();
+  }
+  if (state === 'play' && settled){
+    reconcileBoxes();
+    const crates = crateCount();
+    if (soft.length){
+      state = 'lost'; cancelDrag(); shake += reduceMotion ? 1 : 6;
+      showSpaceFail(true);
+    } else if (!crates && !shelf.length && !stash.length){
+      state = 'won'; cancelDrag(); confetti(); renderHand();
+      schedule(.7, showWin);
+    } else if (crates && !hand.length){
+      state = 'lost'; cancelDrag(); showCardFail();
+    }
+  }
+}
+
+// ---------- drawing: pastries ----------
+function donut(P){
+  ctx.fillStyle = '#e3aa6b';
+  ctx.beginPath(); ctx.arc(0, 1, 17, 0, TAU); ctx.moveTo(6.5, 1); ctx.arc(0, 1, 6.5, 0, TAU, true); ctx.fill();
+  ctx.fillStyle = P.main; ctx.beginPath();
+  for (let i = 0; i <= 28; i++){ const a = i/28*TAU, r = 14.6 + Math.sin(i*2.3)*1.5; ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r - 1); }
+  ctx.closePath(); ctx.moveTo(8, -1); ctx.arc(0, -1, 8, 0, TAU, true); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(0, -1, 11.5, Math.PI*1.1, Math.PI*1.45); ctx.stroke();
+  const sp = [[-9,-7,.6,'#fff'],[5,-10,-.4,'#ffe066'],[10,-2,1.2,'#7fd1ff'],[7,7,.3,'#fff'],[-4,9,-.8,'#ffe066'],[-11,3,1.4,'#7fd1ff'],[-1,-11,.1,'#fff']];
+  for (const [x, y, a, c] of sp){ ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = c; rr(-2.2, -.8, 4.4, 1.6, .8); ctx.fill(); ctx.restore(); }
+}
+function macaron(P){
+  ctx.fillStyle = P.main; rr(-16, 3.5, 32, 11, 5.5); ctx.fill();
+  ctx.fillStyle = P.dark; rr(-15.5, 2.5, 31, 3, 1.5); ctx.fill();
+  ctx.fillStyle = '#fff4e6'; rr(-14.5, -1.5, 29, 5, 2.5); ctx.fill();
+  ctx.fillStyle = P.dark; rr(-15.5, -3.5, 31, 3, 1.5); ctx.fill();
+  ctx.fillStyle = P.main; rr(-16, -15, 32, 12.5, 6.2); ctx.fill();
+  ell(-6, -10.5, 6, 2, 'rgba(255,255,255,.5)');
+}
+function cupcake(P){
+  ctx.fillStyle = P.dark; ctx.beginPath(); ctx.moveTo(-12, 1); ctx.lineTo(12, 1); ctx.lineTo(8.5, 16); ctx.lineTo(-8.5, 16); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.3;
+  for (const x of [-6, 0, 6]){ ctx.beginPath(); ctx.moveTo(x*1.15, 2); ctx.lineTo(x*.82, 15); ctx.stroke(); }
+  ell(0, -1, 14.5, 6, P.main);
+  ell(0, -6.5, 11.5, 5.2, P.main);
+  ell(0, -11.5, 7.5, 4.2, P.main);
+  ell(0, -15, 3, 2.6, P.main);
+  ctx.strokeStyle = P.dark; ctx.globalAlpha = .35; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.ellipse(0, -1, 14.5, 6, 0, .2, Math.PI - .2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0, -6.5, 11.5, 5.2, 0, .2, Math.PI - .2); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ell(-5, -8, 3.5, 1.5, 'rgba(255,255,255,.55)');
+  ell(2.5, -17.5, 2.6, 2.6, '#ffffff');
+}
+function croissant(P){
+  const segs = [[-2,4.6,6],[2,4.6,6],[-1,6.5,8],[1,6.5,8],[0,8,9.5]];
+  for (const [i, rx, ry] of segs){
+    const a = i*.5, x = Math.sin(a)*15, y = 9 - Math.cos(a)*15;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+    ctx.fillStyle = P.main; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = P.dark; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, TAU); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.strokeStyle = P.dark; ctx.lineWidth = 1.2;
+  for (const i of [-1.5, -.5, .5, 1.5]){
+    const a = i*.5, x = Math.sin(a)*15, y = 9 - Math.cos(a)*15;
+    ctx.beginPath(); ctx.moveTo(x - Math.cos(a)*5, y - Math.sin(a)*5); ctx.lineTo(x + Math.cos(a)*5, y + Math.sin(a)*5); ctx.stroke();
+  }
+  ell(-2, -8, 4, 1.6, 'rgba(255,255,255,.55)');
+}
+function cloche(hit){
+  ctx.save(); ctx.translate(Math.sin(now*70)*hit*2, 0);
+  ctx.fillStyle = 'rgba(210,236,255,.32)'; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-20, 15); ctx.lineTo(-20, 0); ctx.arc(0, 0, 20, Math.PI, 0); ctx.lineTo(20, 15); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 2.4;
+  ctx.beginPath(); ctx.arc(0, 0, 15, Math.PI*1.1, Math.PI*1.35); ctx.stroke();
+  ctx.fillStyle = '#d9cfd0'; rr(-22, 14, 44, 4, 2); ctx.fill();
+  ell(0, -21.5, 3.4, 3, '#efe8e8');
+  ctx.restore();
+}
+function drawPastry(x, y, s, k, o = {}){
+  const P = PASTRY[k];
+  ctx.save(); ctx.translate(x, y);
+  if (o.hit) ctx.translate(Math.sin(now*70)*o.hit*3, 0);
+  if (o.rot) ctx.rotate(o.rot);
+  if (o.squash) ctx.scale(1 + o.squash*.12, 1 - o.squash*.12);
+  ctx.scale(s/44, s/44);
+  if (o.ghost) ctx.globalAlpha = o.ghost;
+  if (!o.flat) ell(1, 16, 16, 4.5, 'rgba(74,44,42,.15)');
+  if (k === 0) donut(P); else if (k === 1) macaron(P); else if (k === 2) cupcake(P); else croissant(P);
+  if (o.chain) cloche(o.hit || 0);
+  if (o.danger){
+    ctx.strokeStyle = Math.sin(now*14) > 0 ? '#e5484d' : '#ffffff'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, 0, 22, 0, TAU); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawCan(x, y, s, e){
+  ctx.save(); ctx.translate(x, y);
+  if (e.hit) ctx.translate(Math.sin(now*70)*e.hit*3, 0);
+  if (e.squash) ctx.scale(1 + e.squash*.12, 1 - e.squash*.12);
+  ctx.scale(s/44, s/44);
+  ell(1, 17, 13, 4, 'rgba(74,44,42,.15)');
+  const flash = e.primed && Math.sin(now*45) > 0;
+  ctx.fillStyle = flash ? '#ffe17a' : '#fff6f0'; rr(-11, -8, 22, 25, 6); ctx.fill();
+  ctx.fillStyle = '#ff7eb0'; rr(-11, -1, 22, 10, 2); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.font = FONT(8); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('CREAM', 0, 4.5);
+  ctx.fillStyle = '#c94f82'; rr(-7, -14, 14, 7, 3); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath();
+  for (let i = 0; i < 10; i++){ const a = i/10*TAU - Math.PI/2, r = i % 2 ? 2 : 4.2; ctx.lineTo(Math.cos(a)*r, -18 + Math.sin(a)*r); }
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-7, -5); ctx.lineTo(-7, 14); ctx.stroke();
+  ctx.restore();
+}
+
+// ---------- drawing: the cat ----------
+function drawCat(x, y, s, mood, squash){
+  ctx.save(); ctx.translate(x, y); ctx.scale(s/60, s/60);
+  if (squash) ctx.scale(1 + squash*.22, 1 - squash*.22);
+  ctx.strokeStyle = CAT.fur; ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(20, 14); ctx.quadraticCurveTo(40, 8, 33, -10); ctx.stroke();
+  ctx.strokeStyle = CAT.dark; ctx.lineWidth = 7; ctx.setLineDash([3, 6]);
+  ctx.beginPath(); ctx.moveTo(20, 14); ctx.quadraticCurveTo(40, 8, 33, -10); ctx.stroke(); ctx.setLineDash([]);
+  ell(0, 12, 26, 20, CAT.fur);
+  ell(0, 16, 15, 13, CAT.belly);
+  ell(-12, 30, 7, 4, CAT.belly); ell(12, 30, 7, 4, CAT.belly);
+  ell(0, -12, 21, 17, CAT.fur);
+  ctx.fillStyle = CAT.fur;
+  ctx.beginPath(); ctx.moveTo(-19, -16); ctx.lineTo(-16, -33); ctx.lineTo(-5, -26); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(19, -16); ctx.lineTo(16, -33); ctx.lineTo(5, -26); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = CAT.pink;
+  ctx.beginPath(); ctx.moveTo(-16, -19); ctx.lineTo(-15, -28); ctx.lineTo(-9, -24); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(16, -19); ctx.lineTo(15, -28); ctx.lineTo(9, -24); ctx.closePath(); ctx.fill();
+  // chef hat: the head baker
+  ctx.fillStyle = '#ffffff'; rr(-9, -34, 18, 7, 2); ctx.fill();
+  ell(-6, -38, 6, 5.5, '#ffffff'); ell(0, -41, 7, 6.5, '#ffffff'); ell(6, -38, 6, 5.5, '#ffffff');
+  ctx.strokeStyle = CAT.dark; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  for (const dx of [-4, 0, 4]){ ctx.beginPath(); ctx.moveTo(dx, -26); ctx.lineTo(dx, -21); ctx.stroke(); }
+  ctx.strokeStyle = CAT.ink; ctx.fillStyle = CAT.ink; ctx.lineWidth = 2.2;
+  if (mood === 'happy'){
+    ctx.beginPath(); ctx.arc(-8, -11, 3.5, Math.PI*1.1, Math.PI*1.9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(8, -11, 3.5, Math.PI*1.1, Math.PI*1.9); ctx.stroke();
+  } else {
+    ell(-8, -12, 2.6, 3.2, CAT.ink); ell(8, -12, 2.6, 3.2, CAT.ink);
+    ell(-7.2, -13.2, .9, .9, '#ffffff'); ell(8.8, -13.2, .9, .9, '#ffffff');
+  }
+  ctx.fillStyle = CAT.pink; ctx.beginPath(); ctx.moveTo(-2, -6); ctx.lineTo(2, -6); ctx.lineTo(0, -4); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = CAT.ink; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(0, -4); ctx.quadraticCurveTo(-2.5, -1, -5, -3); ctx.moveTo(0, -4); ctx.quadraticCurveTo(2.5, -1, 5, -3); ctx.stroke();
+  ctx.lineWidth = 1; ctx.globalAlpha = .6;
+  for (const sgn of [-1, 1]){ ctx.beginPath(); ctx.moveTo(sgn*10, -5); ctx.lineTo(sgn*24, -8); ctx.moveTo(sgn*10, -3); ctx.lineTo(sgn*24, -2); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  ell(-13, -5, 3.5, 2, 'rgba(255,159,181,.6)'); ell(13, -5, 3.5, 2, 'rgba(255,159,181,.6)');
+  ctx.restore();
+}
+function drawPaw(x, y, s, squash){
+  ctx.save(); ctx.translate(x, y); ctx.scale(s/44, s/44);
+  if (squash) ctx.scale(1 + squash*.15, 1 - squash*.15);
+  ctx.fillStyle = CAT.fur; rr(-9, -240, 18, 230, 9); ctx.fill();
+  ctx.strokeStyle = CAT.dark; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (const yy of [-60, -40, -20]){ ctx.beginPath(); ctx.moveTo(-8, yy); ctx.lineTo(-2, yy + 3); ctx.stroke(); }
+  ell(0, 0, 15, 12, CAT.fur);
+  ell(0, 3, 6.5, 5, CAT.pink);
+  ell(-8, -5, 3, 3, CAT.pink); ell(-2.5, -8, 3, 3, CAT.pink); ell(3.5, -8, 3, 3, CAT.pink); ell(9, -5, 3, 3, CAT.pink);
+  ctx.restore();
+}
+function drawTail(tipX, y, alpha){
+  ctx.save(); ctx.globalAlpha = alpha; ctx.lineCap = 'round';
+  const x0 = gx - 70;
+  ctx.strokeStyle = CAT.fur; ctx.lineWidth = 16;
+  ctx.beginPath(); ctx.moveTo(x0, y + 36); ctx.quadraticCurveTo((x0 + tipX)/2, y + 8, tipX, y); ctx.stroke();
+  ctx.strokeStyle = CAT.dark; ctx.setLineDash([6, 12]);
+  ctx.beginPath(); ctx.moveTo(x0, y + 36); ctx.quadraticCurveTo((x0 + tipX)/2, y + 8, tipX, y); ctx.stroke();
+  ctx.setLineDash([]);
+  ell(tipX, y, 9, 8, CAT.fur);
+  ctx.restore();
+}
+
+// ---------- drawing: bakery furniture ----------
+function stripes(x, y, w, h, a, b){
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.fillStyle = a; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = b;
+  for (let k = 0; k < w; k += 16) ctx.fillRect(x + k, y, 8, h);
+  ctx.restore();
+}
+function drawBox(d, i){
+  const x = truckX(i), y = TRUCK_Y + d.oy, P = PASTRY[d.color];
+  ctx.save();
+  const b = d.bounce;
+  if (b){ ctx.translate(x + 52, y + 46); ctx.scale(1 + b*.04, 1 - b*.04); ctx.translate(-(x + 52), -(y + 46)); }
+  ctx.fillStyle = 'rgba(0,0,0,.18)'; rr(x + 3, y + 18, 104, 56, 9); ctx.fill();
+  if (!d.closed){ ctx.fillStyle = P.light; rr(x + 8, y + 2, 88, 16, 5); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.4)'; rr(x + 12, y + 5, 80, 4, 2); ctx.fill(); }
+  ctx.fillStyle = '#fffaf4'; rr(x, y + 14, 104, 56, 9); ctx.fill();
+  ctx.strokeStyle = P.dark; ctx.lineWidth = 2; rr(x, y + 14, 104, 56, 9); ctx.stroke();
+  ctx.fillStyle = '#f3e3d6'; rr(x + 5, y + 20, 94, 38, 6); ctx.fill();
+  ctx.fillStyle = P.main; ctx.fillRect(x + 1, y + 60, 102, 6);
+  for (let k = 0; k < 3; k++){
+    const cx = x + 20 + k*32, cy = y + 40;
+    if (d.spots[k]) drawPastry(cx, cy, 28, d.color, { flat:true });
+    else if (k < d.need) drawPastry(cx, cy, 24, d.color, { ghost:.22, flat:true });
+  }
+  if (d.closed){
+    ctx.fillStyle = P.main; rr(x - 2, y + 10, 108, 16, 7); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 48, y + 10, 8, 16);
+    ell(x + 44, y + 9, 7, 5, '#ffffff'); ell(x + 60, y + 9, 7, 5, '#ffffff'); ell(x + 52, y + 10, 3.5, 3.5, P.dark);
+  }
+  if (d.gift) drawGiftTag(x + 92, y + 6, d.gift, 1);
+  ctx.restore();
+}
+function drawGiftTag(x, y, type, s){
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(.12);
+  ctx.fillStyle = 'rgba(0,0,0,.18)'; rr(-9, -10, 20, 26, 4); ctx.fill();
+  ctx.fillStyle = '#fffaf4'; rr(-11, -12, 20, 26, 4); ctx.fill();
+  ctx.strokeStyle = '#5b3a33'; ctx.lineWidth = 1.5; rr(-11, -12, 20, 26, 4); ctx.stroke();
+  ctx.fillStyle = CARDS[type].band; rr(-9, -10, 16, 4, 2); ctx.fill();
+  ctx.fillStyle = '#5b3a33'; ctx.font = FONT(10); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+1', -1, 4);
+  ctx.restore();
+}
+function miniBox(cx, cy, item, first, qs){
+  const P = PASTRY[item.color];
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(qs, qs);
+  ctx.fillStyle = '#fffaf4'; rr(-15, -10, 30, 21, 5); ctx.fill();
+  ctx.strokeStyle = P.dark; ctx.lineWidth = 1.5; rr(-15, -10, 30, 21, 5); ctx.stroke();
+  ctx.fillStyle = P.main; ctx.fillRect(-14, 5, 28, 3);
+  drawPastry(0, -1, 15, item.color, { flat:true });
+  if (first){ ctx.strokeStyle = '#5b3a33'; ctx.lineWidth = 2; rr(-18, -13, 36, 27, 7); ctx.stroke(); }
+  if (item.gift) drawGiftTag(14, -10, item.gift, .55);
+  ctx.restore();
+}
+function badge(x, y, kind){
+  const col = { truck:'#3fb37f', shelf:'#f6c453', soft: RACK.dark, over:'#e5484d', crack:'#9ccbe6', tnt:'#ff7eb0' }[kind];
+  ctx.fillStyle = col; ctx.strokeStyle = '#4a2c2a'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y, 8, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = kind === 'shelf' ? '#4a2c2a' : '#ffffff'; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath();
+  if (kind === 'truck'){ ctx.moveTo(x-3.5, y); ctx.lineTo(x-1, y+3); ctx.lineTo(x+4, y-3); ctx.stroke(); }
+  else if (kind === 'shelf' || kind === 'soft'){ ctx.moveTo(x, y-4); ctx.lineTo(x, y+2); ctx.moveTo(x-3, y-1); ctx.lineTo(x, y+2); ctx.lineTo(x+3, y-1); ctx.moveTo(x-4, y+4.5); ctx.lineTo(x+4, y+4.5); ctx.stroke(); }
+  else if (kind === 'over'){ ctx.moveTo(x, y-4); ctx.lineTo(x, y+1); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y+4, 1.2, 0, TAU); ctx.fill(); }
+  else if (kind === 'crack'){ ctx.moveTo(x-1, y-4); ctx.lineTo(x+2, y-1); ctx.lineTo(x-2, y+1); ctx.lineTo(x+1, y+4); ctx.stroke(); }
+  else { ctx.arc(x, y, 3, 0, TAU); ctx.fill(); }
+}
+function drawRack(){
+  const o = softOpen;
+  const fullW = SOFT_CAP*SOFT + (SOFT_CAP-1)*6 + 12, w = lerp(44, fullW, o), h = lerp(5, 34, o);
+  const x = (W - w)/2, y = SOFT_Y;
+  ctx.fillStyle = RACK.dark;
+  ctx.fillRect(x + 6, SHELF_Y + 60, 3, y - SHELF_Y - 60 + 2); ctx.fillRect(x + w - 9, SHELF_Y + 60, 3, y - SHELF_Y - 60 + 2);
+  ctx.strokeStyle = RACK.dark; ctx.lineWidth = 3; rr(x, y, w, h, 5); ctx.stroke();
+  if (o > .25){
+    const a = Math.min(1, (o - .25) / .6);
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = RACK.bar; ctx.lineWidth = 1.5;
+    for (let k = 1; k < 6; k++){ const xx = x + k*w/6; ctx.beginPath(); ctx.moveTo(xx, y + 2); ctx.lineTo(xx, y + h - 2); ctx.stroke(); }
+    for (let k = 1; k < 3; k++){ const yy = y + k*h/3; ctx.beginPath(); ctx.moveTo(x + 2, yy); ctx.lineTo(x + w - 2, yy); ctx.stroke(); }
+    ctx.font = FONT(10); ctx.textBaseline = 'middle';
+    ctx.fillStyle = RACK.dark; ctx.textAlign = 'right'; ctx.fillText('RACK', x - 6, SOFT_CY);
+    if (soft.length){
+      ctx.textAlign = 'left'; ctx.fillStyle = Math.sin(now*8) > 0 ? '#e5484d' : RACK.dark;
+      ctx.fillText('CLEARS AT COMBO END', x + w + 6, SOFT_CY);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+function drawTin(){
+  const x = tinX(), w = Math.min(60, W - 4 - x), y = SHELF_Y + 4, h = 52;
+  ctx.save(); ctx.globalAlpha = stashShow;
+  ctx.translate(x + w/2, y + h/2); ctx.scale(.7 + .3*stashShow, .7 + .3*stashShow); ctx.translate(-(x + w/2), -(y + h/2));
+  ctx.fillStyle = '#9fd3c7'; rr(x, y + 6, w, h - 6, 9); ctx.fill();
+  ctx.strokeStyle = '#4a2c2a'; ctx.lineWidth = 2; rr(x, y + 6, w, h - 6, 9); ctx.stroke();
+  ctx.fillStyle = '#6fb7a6'; rr(x - 2, y, w + 4, 9, 4); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#4a2c2a'; ctx.font = FONT(8); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('STASH', x + w/2, y + 4.5);
+  ctx.restore();
+}
+function drawExpress(){
+  const e = express, w = 124, h = 50, x = e.x - w/2, y = e.y - h/2 - 2;
+  ctx.save();
+  if (e.bounce){ ctx.translate(e.x, e.y); ctx.scale(1 + e.bounce*.05, 1 - e.bounce*.05); ctx.translate(-e.x, -e.y); }
+  ctx.strokeStyle = 'rgba(246,196,83,.7)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (const dy of [-12, 0, 12]){ ctx.beginPath(); ctx.moveTo(x - 30, y + h/2 + dy); ctx.lineTo(x - 8, y + h/2 + dy); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(0,0,0,.2)'; rr(x + 3, y + 4, w, h, 10); ctx.fill();
+  ctx.fillStyle = '#f6c453'; rr(x, y, w, h, 10); ctx.fill();
+  ctx.strokeStyle = '#4a2c2a'; ctx.lineWidth = 2.5; rr(x, y, w, h, 10); ctx.stroke();
+  ctx.fillStyle = '#fffaf4'; rr(x + 6, y + 6, w - 12, 20, 6); ctx.fill();
+  ctx.fillStyle = '#4a2c2a'; ctx.font = FONT(12); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('EXPRESS BOX', e.x, y + h - 11);
+  ctx.restore();
+}
+function drawAimPill(pv, pred){
+  if (!pv || !pred) return;
+  const tapMode = aim && selected != null && !(drag && drag.moved);
+  const warn = pred.over ? 'OVERFLOW!' : pred.toSoft ? 'COOLING RACK' : '';
+  const label = tapMode ? (warn ? warn + ' · TAP AGAIN' : 'TAP AGAIN TO DROP') : warn;
+  if (!label) return;
+  ctx.font = FONT(12); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(label).width + 22, h = 24;
+  const cx = Math.max(w/2 + 4, Math.min(W - w/2 - 4, cellX(pv.c)));
+  const cy = pv.r === 0 ? cellY(pv.r) + 46 : cellY(pv.r) - 46;
+  ctx.globalAlpha = .88 + .12*Math.sin(now*8);
+  ctx.fillStyle = pred.over ? '#e5484d' : pred.toSoft ? RACK.dark : '#5b3a33';
+  rr(cx - w/2, cy - h/2, w, h, 12); ctx.fill();
+  ctx.fillStyle = pred.over || pred.toSoft ? '#ffffff' : '#f6c453'; ctx.fillText(label, cx, cy + 1);
+  ctx.globalAlpha = 1;
+}
+function render(){
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const sx = shake ? rand(-1,1)*shake*.5 : 0, sy = shake ? rand(-1,1)*shake*.5 : 0;
+  ctx.setTransform(dpr*scale, 0, 0, dpr*scale, dpr*(ox + sx*scale), dpr*(oy + sy*scale));
+
+  // box counter
+  ctx.fillStyle = '#7a4e3c'; rr(0, 0, W, 94, 14); ctx.fill();
+  ctx.fillStyle = '#8d5c47'; rr(0, 0, W, 10, 10); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,230,210,.35)'; ctx.lineWidth = 2; ctx.setLineDash([6,8]);
+  for (const i of [1,2]){ ctx.beginPath(); ctx.moveTo(laneX(i)-2, 10); ctx.lineTo(laneX(i)-2, 84); ctx.stroke(); }
+  ctx.setLineDash([]);
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, 88); ctx.clip();
+  lanes.forEach((d, i) => {
+    if (d) drawBox(d, i);
+    else { ctx.fillStyle = 'rgba(255,230,210,.35)'; ctx.font = FONT(14); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('DONE', laneX(i) + 62, 48); }
+  });
+  ctx.restore();
+  stripes(0, 87, W, 7, '#ff7eb0', '#fff3ea');
+
+  const pv = previewTarget();
+  const pred = pv ? predict(pv.type, pv.r, pv.c) : null;
+
+  // box queue
+  const qs = QH / 34, step = 38*qs, x0 = 52 + 20*qs;
+  const fit = Math.max(3, Math.floor((W - 92 - x0) / step) + 1);
+  ctx.fillStyle = '#f0cfc4'; rr(0, QUEUE_CY - QH/2, W, QH, 10); ctx.fill();
+  ctx.font = FONT(Math.round(11*Math.min(qs,1.2))); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#9a7a70'; ctx.fillText('NEXT', 10, QUEUE_CY + 1);
+  const shown = queue.length > fit ? fit - 1 : queue.length;
+  queue.slice(0, shown).forEach((q, k) => miniBox(x0 + k*step, QUEUE_CY, q, k === 0, qs));
+  if (queue.length > shown){ ctx.fillText('+' + (queue.length - shown), x0 + shown*step - 14*qs, QUEUE_CY + 1); }
+  if (!queue.length){ ctx.fillText('LAST BOXES', 52, QUEUE_CY + 1); }
+  const used = shelf.length;
+  ctx.textAlign = 'right'; ctx.fillStyle = used >= capacity ? '#e5484d' : '#9a7a70';
+  ctx.fillText(`SHELF ${used}/${capacity}`, W - 10, QUEUE_CY + 1);
+
+  // display shelf with plates
+  const SL = slotSize(), total = capacity*SL + (capacity-1)*6, bx = shelfLeft() - 8;
+  ctx.fillStyle = '#ecd2c7'; rr(bx, SHELF_Y, total + 16, 60, 12); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.45)'; rr(bx + 4, SHELF_Y + 3, total + 8, 6, 3); ctx.fill();
+  if (used >= capacity - 1 && state === 'play'){
+    ctx.strokeStyle = Math.sin(now*8) > 0 ? '#e5484d' : 'rgba(229,72,77,.3)'; ctx.lineWidth = 3;
+    rr(bx, SHELF_Y, total + 16, 60, 12); ctx.stroke();
+  }
+  for (let i = 0; i < capacity; i++){
+    const x = slotX(i);
+    ell(x, SHELF_CY + 10, SL/2, SL*.2, '#d9bcb0');
+    ell(x, SHELF_CY + 8, SL/2 - 1, SL*.19, '#fffaf4');
+    ell(x, SHELF_CY + 8, SL/2 - 7, SL*.11, '#f3e6e0');
+  }
+  stripes(bx + 10, SHELF_Y + 56, total - 4, 4, '#ff7eb0', '#fff3ea');
+
+  drawRack();
+  if (stashShow > .02) drawTin();
+
+  // baking tray
+  ctx.fillStyle = '#a99a92'; rr(gx-7, GRID_TOP-7, cols*CELL + 14, rows*CELL + 14, 14); ctx.fill();
+  ctx.fillStyle = '#c9bcb5'; rr(gx-3, GRID_TOP-3, cols*CELL + 6, rows*CELL + 6, 11); ctx.fill();
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++){
+    ctx.fillStyle = (r + c) % 2 ? '#f6ead8' : '#f1e1cb';
+    rr(gx + c*CELL + 2, GRID_TOP + r*CELL + 2, CELL-4, CELL-4, 8); ctx.fill();
+  }
+  const tc = tutCells();
+  if (tc && state === 'play' && !droppers.length && settled){
+    ctx.strokeStyle = `rgba(246,196,83,${.55 + .45*Math.sin(now*6)})`; ctx.lineWidth = 4;
+    for (const [r2, c2] of tc){ rr(gx + c2*CELL + 1, GRID_TOP + r2*CELL + 1, CELL-2, CELL-2, 9); ctx.stroke(); }
+  }
+  if (pv){
+    const band = CARDS[pv.type].band;
+    ctx.globalAlpha = .45; ctx.fillStyle = band;
+    for (const [r2, c2] of shapeCells(pv.type, pv.r, pv.c)){ rr(gx + c2*CELL + 2, GRID_TOP + r2*CELL + 2, CELL-4, CELL-4, 8); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#5b3a33'; ctx.lineWidth = 2.5; ctx.setLineDash([5,4]);
+    rr(gx + pv.c*CELL + 2, GRID_TOP + pv.r*CELL + 2, CELL-4, CELL-4, 8); ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.save(); ctx.beginPath(); ctx.rect(gx-7, -200, cols*CELL + 14, GRID_TOP + rows*CELL + 207); ctx.clip();
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++){
+    const e = grid[r][c]; if (!e) continue;
+    if (e.y < GRID_TOP - 30) continue;
+    if (e.kind === 'tnt') drawCan(e.x, e.y, 44, e);
+    else drawPastry(e.x, e.y, 42, e.color, { chain: e.chain, squash: e.squash, hit: e.hit });
+  }
+  ctx.restore();
+  if (pred) for (const m of pred.marks) badge(cellX(m.c) + 15, cellY(m.r) - 15, m.k);
+
+  // the cat's moves
+  for (const d of droppers){
+    if (d.type === 'pop') drawPaw(d.x, d.y - 4, 46, d.squash);
+    else if (d.type === 'sweep') drawTail(lerp(gx - 20, gx + cols*CELL + 14, ease(d.t)), cellY(d.r), 1);
+    else if (d.type === 'drill') drawCat(d.x, d.y - 8, 44, 'focus', d.squash);
+    else drawCat(d.x, d.y - 14, 124, 'focus', d.squash);
+  }
+  for (const a of afterfx){
+    const k = a.t / a.life, al = 1 - k*k;
+    ctx.save(); ctx.globalAlpha = al;
+    if (a.type === 'pop') drawPaw(a.x, a.y - 4 - k*70, 46, 0);
+    else if (a.type === 'sweep') drawTail(gx + cols*CELL + 14 - k*30, cellY(a.r), 1);
+    else if (a.type === 'drill') drawCat(a.x, a.y - 8 - Math.sin(k*Math.PI)*40 - k*30, 44, 'happy', 0);
+    else drawCat(a.x, a.y - 14 - Math.sin(k*Math.PI)*36 - k*20, 124, 'happy', 0);
+    ctx.restore();
+  }
+  drawAimPill(pv, pred);
+
+  // pastries resting on shelf and rack
+  for (const it of shelf) if (it.landed) drawPastry(it.px, it.py, it.s, it.color);
+  for (const it of soft) if (it.landed) drawPastry(it.px, it.py, it.s, it.color);
+  stash.slice(0, 4).forEach(it => { if (it.landed) drawPastry(it.px, it.py, it.s, it.color, { flat:true }); });
+  if (stash.length > 4 && stashShow > .5){
+    const p = stashPos(3); ctx.fillStyle = '#4a2c2a'; ctx.beginPath(); ctx.arc(p.x + 10, p.y + 9, 8, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = FONT(9); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+' + (stash.length - 4), p.x + 10, p.y + 9.5);
+  }
+  if (express) drawExpress();
+  for (const o of overflow) if (o.landed) drawPastry(o.px, o.py, 30, o.color, { danger:true });
+
+  // tail streaks and puff rings
+  for (const b of beams){
+    const k = b.t / b.life;
+    ctx.strokeStyle = `rgba(255,250,240,${(1-k)*.85})`; ctx.lineWidth = b.w*(1-k*.6); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(b.x0, b.y0); ctx.lineTo(b.x1, b.y1); ctx.stroke();
+    ctx.strokeStyle = `rgba(242,166,90,${(1-k)*.8})`; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(b.x0, b.y0); ctx.lineTo(b.x1, b.y1); ctx.stroke();
+  }
+  for (const g of rings){
+    const k = g.t / g.life;
+    ctx.fillStyle = `rgba(255,250,240,${(1-k)*.6})`; ctx.beginPath(); ctx.arc(g.x, g.y, g.max*k*.7, 0, TAU); ctx.fill();
+    ctx.strokeStyle = `rgba(255,190,215,${1-k})`; ctx.lineWidth = 4*(1-k) + 1; ctx.beginPath(); ctx.arc(g.x, g.y, g.max*k, 0, TAU); ctx.stroke();
+  }
+  // flying pastries
+  for (const f of flyers){
+    const d = destPos(f.dest), t = Math.min(1, f.t);
+    const e = ease(t);
+    const x = lerp(f.sx, d.x, e), y = lerp(f.sy, d.y, e) - f.arc*4*t*(1-t), s = lerp(f.s0, d.s, e);
+    drawPastry(x, y, s, f.color, { rot: f.spin*(1-e), danger: f.dest.kind === 'over' });
+  }
+  // particles
+  for (const p of particles){
+    const a = 1 - p.t/p.life;
+    if (p.color === 'flour'){ ctx.fillStyle = `rgba(255,250,244,${a*.6})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill(); }
+    else if (p.rect){ ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.globalAlpha = Math.min(1, a*2); ctx.fillStyle = p.color; rr(-p.size/2, -p.size/5, p.size, p.size/2.5, p.size/5); ctx.fill(); ctx.restore(); }
+    else { ctx.globalAlpha = a; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
+  }
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = FONT(16);
+  for (const tx of texts){
+    const k = tx.t / tx.life;
+    ctx.globalAlpha = 1 - k*k; ctx.lineWidth = 4; ctx.strokeStyle = '#4a2c2a'; ctx.lineJoin = 'round';
+    const y = tx.y - k*26;
+    ctx.strokeText(tx.text, tx.x, y); ctx.fillStyle = tx.color; ctx.fillText(tx.text, tx.x, y);
+  }
+  ctx.globalAlpha = 1;
+}
+function previewTarget(){
+  if (state !== 'play') return null;
+  if (drag && drag.moved){
+    if (!hover || !hand[drag.i]) return null;
+    return { type: hand[drag.i].type, r: hover.r, c: hover.c };
+  }
+  if (selected == null || !hand[selected]) return null;
+  const cell = aim || hover;
+  if (!cell) return null;
+  return { type: hand[selected].type, r: cell.r, c: cell.c };
+}
+
+// ---------- input ----------
+function toLogical(clientX, clientY){
+  const b = canvas.getBoundingClientRect();
+  return { x: (clientX - b.left - ox) / scale, y: (clientY - b.top - oy) / scale };
+}
+function cellAt(p){
+  const c = Math.floor((p.x - gx) / CELL), r = Math.floor((p.y - GRID_TOP) / CELL);
+  if (c < 0 || c >= cols || r < 0 || r >= rows) return null;
+  return { r, c };
+}
+canvas.addEventListener('pointerdown', ev => {
+  if (state !== 'play') return;
+  const cell = cellAt(toLogical(ev.clientX, ev.clientY));
+  if (selected != null && hand[selected]){
+    if (!cell) return;
+    if (!tutAllows(cell)){ toast('Tap the glowing tile.'); return; }
+    if (tut && tut.step === 1){ useCard(selected, cell); return; }
+    if (ev.pointerType === 'mouse' && !(tut && tut.step === 2)){ useCard(selected, cell); return; }
+    if (aim && aim.r === cell.r && aim.c === cell.c){ useCard(selected, cell); return; }
+    aim = cell; aimPointer = ev.pointerId; buzz(6);
+    try { canvas.setPointerCapture(ev.pointerId); } catch(e){}
+    return;
+  }
+  if (!cell) return;
+  const e = grid[cell.r][cell.c];
+  if (e){ e.hit = .6; }
+  if (!toastShown.tap){ toastShown.tap = true; toast('Pick one of Butter’s move cards first.'); }
+});
+canvas.addEventListener('pointermove', ev => {
+  if (drag) return;
+  if (aimPointer === ev.pointerId){
+    const c = cellAt(toLogical(ev.clientX, ev.clientY));
+    if (c && tutAllows(c) && (!aim || c.r !== aim.r || c.c !== aim.c)){ aim = c; buzz(4); }
+    return;
+  }
+  hover = ev.pointerType === 'mouse' && selected != null ? cellAt(toLogical(ev.clientX, ev.clientY)) : null;
+});
+const endAim = ev => { if (aimPointer === ev.pointerId) aimPointer = null; };
+canvas.addEventListener('pointerup', endAim);
+canvas.addEventListener('pointercancel', endAim);
+canvas.addEventListener('pointerleave', () => { if (!drag) hover = null; });
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape'){ selected = null; aim = null; setCardClasses(); }
+});
+
+tray.addEventListener('pointerdown', ev => {
+  const el = ev.target.closest('.bcard');
+  if (!el || state !== 'play' || el.disabled) return;
+  ev.preventDefault();
+  drag = { i: +el.dataset.i, el, sx: ev.clientX, sy: ev.clientY, moved:false, touch: ev.pointerType !== 'mouse', ghost:null };
+  try { el.setPointerCapture(ev.pointerId); } catch(e){}
+});
+document.addEventListener('pointermove', ev => {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(ev.clientX - drag.sx, ev.clientY - drag.sy) > 10){
+    drag.moved = true;
+    selected = null; aim = null; aimPointer = null;
+    drag.ghost = drag.el.cloneNode(true);
+    drag.ghost.classList.remove('new','sel'); drag.ghost.classList.add('ghost');
+    document.body.appendChild(drag.ghost);
+    setCardClasses(); buzz(8);
+  }
+  if (!drag.moved) return;
+  const lift = drag.touch ? Math.round(CELL*scale) : 0;
+  hover = cellAt(toLogical(ev.clientX, ev.clientY - lift));
+  if (drag.ghost){
+    drag.ghost.style.left = (ev.clientX - 34) + 'px';
+    drag.ghost.style.top = (ev.clientY - lift - 47) + 'px';
+    drag.ghost.classList.toggle('over', !!hover);
+  }
+});
+function endDrag(){
+  if (!drag) return;
+  if (drag.moved){
+    if (hover && state === 'play' && tutAllows(hover) && !(tut && tut.step === 2)) useCard(drag.i, hover);
+    else if (hover && tut && tut.step === 2 && tutAllows(hover)){ selected = drag.i; aim = hover; }
+    cancelDrag();
+  } else {
+    if (state === 'play'){
+      if (selected === drag.i){ selected = null; aim = null; }
+      else {
+        selected = drag.i;
+        if (!tut && !toastShown.sel){ toastShown.sel = true; toast(coarse ? 'Tap the tray to aim, tap again to drop' : 'Click the tray to drop'); }
+      }
+      buzz(6);
+    }
+    drag = null; hover = null; setCardClasses();
+  }
+}
+function setCardClasses(){
+  tray.querySelectorAll('.bcard').forEach(el => {
+    const i = +el.dataset.i;
+    if (tut) el.classList.toggle('glow', selected == null && !el.disabled && hand.findIndex(h => h.type === tutCard()) === i);
+    el.classList.toggle('sel', selected === i);
+    el.classList.toggle('lifted', !!(drag && drag.moved && drag.i === i));
+    el.setAttribute('aria-pressed', selected === i ? 'true' : 'false');
+  });
+}
+function cancelDrag(){
+  if (drag && drag.ghost) drag.ghost.remove();
+  drag = null; hover = null; renderHand();
+}
+document.addEventListener('pointerup', endDrag);
+document.addEventListener('pointercancel', cancelDrag);
+
+// ---------- UI ----------
+function patHTML(type){
+  const on = new Set();
+  if (type === 'pop') [[0,0],[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,b]) => on.add((2+a)+','+(2+b)));
+  if (type === 'sweep') for (let k = 0; k < 5; k++) on.add('2,'+k);
+  if (type === 'drill') for (let k = 0; k < 5; k++) on.add(k+',2');
+  if (type === 'box') for (let a = 1; a <= 3; a++) for (let b = 1; b <= 3; b++) on.add(a+','+b);
+  let s = '';
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++){
+    const k = r+','+c;
+    s += `<i class="${k === '2,2' ? 'c' : on.has(k) ? 'on' : ''}"></i>`;
+  }
+  return `<span class="pat" aria-hidden="true">${s}</span>`;
+}
+function renderDeck(){
+  deckEl.innerHTML = `<b>${draw.length}</b><small>DECK</small>`;
+  deckEl.setAttribute('aria-label', `${draw.length} cards in deck`);
+  deckEl.title = 'Gift boxes add a card to the deck when they leave full';
+}
+function renderHand(){
+  if (!hand || (drag && drag.moved)) return;
+  const play = state === 'play';
+  tray.querySelectorAll('.bcard').forEach(el => el.remove());
+  hand.forEach((cd, i) => {
+    const C = CARDS[cd.type], el = document.createElement('button');
+    el.type = 'button';
+    el.className = ['bcard', 't-' + cd.type, prevIds.has(cd.id) ? '' : 'new', selected === i ? 'sel' : ''].filter(Boolean).join(' ');
+    const want = tutCard();
+    el.dataset.i = i; el.disabled = !play || (want && cd.type !== want);
+    if (want && cd.type === want && selected !== i && hand.findIndex(h => h.type === want) === i) el.classList.add('glow');
+    el.setAttribute('aria-pressed', selected === i ? 'true' : 'false');
+    el.setAttribute('aria-label', `${C.name} move, hits ${C.hint}`);
+    el.innerHTML = patHTML(cd.type) + `<b>${C.name}</b><small>${C.hint}</small>`;
+    tray.appendChild(el);
+  });
+  prevIds = new Set(hand.map(c => c.id));
+  layoutHand(); renderDeck(); renderBoosters();
+}
+// Fan the hand like playing cards: slight overlap, tilt and a downward arc toward the edges.
+function layoutHand(){
+  const cards = [...tray.querySelectorAll('.bcard')], n = cards.length;
+  if (!n) return;
+  const left = 70, cw = 68, avail = tray.clientWidth - left - 10;
+  const step = n > 1 ? Math.min(cw + 6, (avail - cw) / (n - 1)) : 0;
+  const start = left + (avail - (cw + step*(n - 1))) / 2;
+  cards.forEach(el => {
+    const i = +el.dataset.i, m = i - (n - 1)/2;
+    el.style.setProperty('--x', (start + i*step).toFixed(1) + 'px');
+    el.style.setProperty('--y', (m*m*2.6).toFixed(1) + 'px');
+    el.style.setProperty('--r', (m*4.5).toFixed(1) + 'deg');
+    el.style.setProperty('--z', i + 1);
+  });
+}
+const BOOST_UI = [['bShuffle','shuffle'], ['bCall','call'], ['bStash','stash']];
+function renderBoosters(){
+  const play = state === 'play';
+  for (const [id, k] of BOOST_UI){
+    const b = document.getElementById(id), c = b.querySelector('.count'), n = boosters[k];
+    c.textContent = n > 0 ? n : 'AD'; c.classList.toggle('ad', n <= 0);
+    b.disabled = !play || !!tut;
+  }
+}
+function needsAd(k, name){
+  if (boosters[k] > 0) return false;
+  boosters[k] = 1; toast(`Rewarded ad watched: +1 ${name}`); renderBoosters();
+  return true;
+}
+// Shuffle re-rolls every card in the hand (the deck is untouched).
+function shuffleHand(){
+  if (!hand.length){ toast('No cards in your hand to shuffle.'); return false; }
+  const pool = ['pop','pop','pop','sweep','sweep','drill','drill','box'];
+  const before = hand.map(c => c.type).join();
+  let types, tries = 0;
+  do { types = hand.map(() => pool[Math.floor(Math.random()*pool.length)]); } while (types.join() === before && ++tries < 10);
+  hand = types.map(card); selected = null; aim = null; aimPointer = null;
+  texts.push({ x: W/2, y: GRID_TOP + rows*CELL - 10, text:'SHUFFLED!', t:0, life:.9, color:'#f6c453' });
+  renderHand();
+  return true;
+}
+// Stash moves every pastry on the plates into the tin. Tin pastries jump into
+// a matching box before anything else, and the tin never makes you fail.
+function stashPlates(){
+  const take = shelf.filter(it => it.landed);
+  if (!take.length){ toast('Nothing on the plates to stash yet.'); return false; }
+  shelf = shelf.filter(it => !it.landed);
+  for (const it of take){
+    stash.push(it); it.landed = false;
+    launch(it.color, it.px, it.py, it.s, { kind:'item', item: it }, .32, 34);
+  }
+  texts.push({ x: W - 36, y: SHELF_Y - 6, text:'STASHED', t:0, life:.9, color:'#9fd3c7' });
+  return true;
+}
+// Swap in the box the plates need most: an empty box at the counter goes back
+// to the queue, otherwise the called box becomes the next one in line.
+function callTruck(){
+  const counts = {};
+  for (const it of [...stash, ...shelf, ...soft]) counts[it.color] = (counts[it.color] || 0) + 1;
+  const served = new Set(lanes.filter(d => d && d.state === 'ready' && d.reserved < 3).map(d => d.color));
+  const want = Object.keys(counts).map(Number).filter(c => !served.has(c) && queue.some(q => q.color === c)).sort((a, b) => counts[b] - counts[a]);
+  if (!want.length){ toast(counts && Object.keys(counts).length ? 'Boxes for your waiting pastries are already here.' : 'Nothing is waiting for a box yet.'); return false; }
+  const color = want[0];
+  const item = queue.splice(queue.findIndex(q => q.color === color), 1)[0];
+  const lane = lanes.findIndex(d => d && d.state === 'ready' && d.reserved === 0);
+  if (lane >= 0){
+    queue.unshift({ color: lanes[lane].color, gift: lanes[lane].gift });
+    lanes[lane] = newDock(item);
+    texts.push({ x: laneX(lane) + 62, y: 46, text:'CALLED!', t:0, life:1, color: PASTRY[color].light });
+  } else {
+    queue.unshift(item);
+    texts.push({ x: 120, y: QUEUE_CY - 4, text:'NEXT UP!', t:0, life:1, color: PASTRY[color].light });
+  }
+  return true;
+}
+document.getElementById('bShuffle').addEventListener('click', () => {
+  if (state !== 'play' || needsAd('shuffle', 'Shuffle')) return;
+  if (shuffleHand()){ boosters.shuffle--; renderBoosters(); buzz(15); }
+});
+document.getElementById('bCall').addEventListener('click', () => {
+  if (state !== 'play' || needsAd('call', 'Call box')) return;
+  if (callTruck()){ boosters.call--; renderBoosters(); buzz(15); }
+});
+document.getElementById('bStash').addEventListener('click', () => {
+  if (state !== 'play' || needsAd('stash', 'Stash')) return;
+  if (stashPlates()){ boosters.stash--; renderBoosters(); buzz(15); }
+});
+document.getElementById('restart').onclick = () => { cancelDrag(); loadLevel(levelIdx); };
+
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
+}
+function showPanel(title, body, buttons){
+  document.getElementById('ptitle').textContent = title;
+  document.getElementById('pbody').textContent = body;
+  const box = document.getElementById('pbtns'); box.innerHTML = '';
+  buttons.forEach(b => {
+    const el = document.createElement('button');
+    el.type = 'button'; el.className = 'btn' + (b.primary ? ' primary' : '');
+    el.textContent = b.label;
+    if (b.ad){ const s = document.createElement('span'); s.className = 'ad'; s.textContent = 'AD'; el.appendChild(s); }
+    el.onclick = b.onClick; box.appendChild(el);
+  });
+  document.getElementById('panel').hidden = false; renderHand();
+  if (box.firstChild) box.firstChild.focus();
+}
+function hidePanel(){ document.getElementById('panel').hidden = true; }
+function showWin(){
+  const last = levelIdx === LEVELS.length - 1;
+  const left = hand.length + draw.length;
+  if (tut){
+    showPanel('Tutorial done!', 'Pastries without a box wait on the plates. Keep the plates from overflowing, and use each move where it sends the most pastries home.',
+      [{ label:'Start level 1', primary:true, onClick: () => loadLevel(1) }]);
+    return;
+  }
+  showPanel('Orders boxed!',
+    last ? `All test levels done, with ${left} cards to spare. Replay them and try different moves.`
+         : `${left} cards left over (in the real game, these could become stars or coins). Next level adds ${levelIdx === 1 ? 'a fourth pastry, cream cans and glass cloches' : 'a bigger tray and more cloches'}.`,
+    [{ label: last ? 'Play from level 1' : 'Next level', primary:true, onClick: () => loadLevel(last ? 1 : levelIdx + 1) }]);
+}
+function showSpaceFail(fromSoft){
+  showPanel('Shelf overflow',
+    fromSoft ? 'The combo ended with pastries still on the cooling rack. It only holds pastries while moves and boxes are in motion.'
+             : 'A pastry had nowhere to land, not even on the cooling rack.',
+    [{ label:'Express box', ad:true, primary:true, onClick: reviveExpress },
+     { label:'Retry level', onClick: () => loadLevel(levelIdx) }]);
+}
+function toExpress(color, x, y, s){
+  launch(color, x, y, s, { kind:'express', k: express.want }, rand(.38,.5), 40);
+  express.want++;
+}
+// Revive: an express box pulls up over the plates and takes every pastry on the plates, the rack and the floor.
+function reviveExpress(){
+  hidePanel();
+  express = { x: -90, tx: W/2, y: SHELF_CY, t: 0, state:'in', want: 0, got: 0, bounce: 0, sp: 0 };
+  const take = [...shelf.filter(it => it.landed), ...soft.filter(it => it.landed), ...overflow.filter(o => o.landed).map(o => ({ color:o.color, px:o.px, py:o.py, s:30 }))];
+  shelf = shelf.filter(it => !it.landed); soft = soft.filter(it => !it.landed); overflow = [];
+  take.forEach((it, k) => schedule(.25 + k*.05, () => toExpress(it.color, it.px, it.py, it.s || 30)));
+  express.expect = take.length;
+  reconcileBoxes();
+  overflowShown = false; state = 'play';
+  texts.push({ x: W/2, y: SHELF_Y - 8, text:'EXPRESS BOX!', t:0, life:1.1, color:'#f6c453' });
+  renderHand();
+}
+function showCardFail(){
+  showPanel('Butter is out of moves', 'Pastries are left but your hand is empty.', [
+    { label:'+2 FLOP cards', ad:true, primary:true, onClick: () => { hand.push(card('box'), card('box')); state = 'play'; hidePanel(); renderHand(); } },
+    { label:'Retry level', onClick: () => loadLevel(levelIdx) },
+  ]);
+}
+
+// ---------- sizing + loop ----------
+function layout(){
+  const w = stage.clientWidth || W, h = stage.clientHeight || 632, r = rows || 7;
+  const coachRoom = L && L.tutorial ? 78 : 0;
+  const need = 94 + 34 + 60 + 38 + 4*6 + 6 + r*CELL + 10 + coachRoom;
+  let s = w / W, extra = h / s - need;
+  if (extra < 0){ s = h / need; extra = 0; }
+  extra = Math.min(extra, 150);
+  QH = 34 + Math.min(extra*.3, 16);
+  const gap = 6 + (extra - (QH - 34)) / 4;
+  let y = 94 + gap;
+  QUEUE_CY = y + QH/2; y += QH + gap;
+  SHELF_Y = y; SHELF_CY = y + 30; y += 60 + gap;
+  SOFT_Y = y; SOFT_CY = y + 17; y += 38 + gap;
+  GRID_TOP = y + 6; H = GRID_TOP + r*CELL + 10 + coachRoom;
+  scale = s; ox = (w - W*s)/2; oy = Math.max(0, (h - H*s)/2);
+}
+const coachEl = document.getElementById('coach'), coachText = document.getElementById('coachText'), fingerEl = document.getElementById('finger');
+let coachKey = '';
+document.getElementById('coachSkip').addEventListener('click', () => { cancelDrag(); loadLevel(1); });
+function tileScreen(r, c){
+  const b = canvas.getBoundingClientRect();
+  return { x: b.left + ox + cellX(c)*scale, y: b.top + oy + cellY(r)*scale };
+}
+function tutorialUI(){
+  let text = '', target = null;
+  if (tut && state === 'play'){
+    const busy = !settled || tut.pending;
+    const want = tutCard(), wi = want ? hand.findIndex(h => h.type === want) : -1;
+    if (tut.step === 1){
+      if (busy) text = 'Each box wants <b>3 matching pastries</b>. Watch them fly home!';
+      else if (selected == null){ text = 'Boxes wait for <b>3 matching pastries</b>. Tap the <b>TAP</b> card to pick up Butter\u2019s paw.'; target = 'card'; }
+      else { text = 'Now tap the glowing tile. The paw hits it and the 4 tiles around it.'; target = [1,1]; }
+    } else if (tut.step === 2){
+      if (busy) text = 'Nice! Pastries with no box yet would wait on the plates.';
+      else if (selected == null){ text = '<b>SWIPE</b> hits a whole row. Pick the SWIPE card.'; target = 'card'; }
+      else if (!aim){ text = 'Tap a tile in the glowing row to aim.'; target = [1,1]; }
+      else { text = 'Green ticks go straight into a box. <b>Tap the same tile again</b> to drop.'; target = [aim.r, aim.c]; }
+    } else {
+      text = busy ? 'Almost there\u2026' : 'Finish the last orders on your own!';
+    }
+    if (target === 'card'){
+      const el = tray.querySelector(`.bcard[data-i="${wi}"]`);
+      if (el){ const b = el.getBoundingClientRect(); target = { x: b.left + b.width/2, y: b.top + b.height*.35 }; } else target = null;
+    } else if (Array.isArray(target)) target = tileScreen(target[0], target[1]);
+    if (busy || (drag && drag.moved)) target = null;
+  }
+  if (text !== coachKey){ coachKey = text; coachText.innerHTML = text; coachEl.hidden = !text; }
+  if (text){
+    const top = oy + (GRID_TOP + rows*CELL + 14)*scale;
+    coachEl.style.top = Math.min(top, stage.clientHeight - coachEl.offsetHeight - 4) + 'px';
+  }
+  if (target){ fingerEl.hidden = false; fingerEl.style.left = target.x + 'px'; fingerEl.style.top = target.y + 'px'; }
+  else fingerEl.hidden = true;
+}
+function resize(){
+  const w = stage.clientWidth, h = stage.clientHeight;
+  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);
+  layout();
+}
+loadLevel(0);
+new ResizeObserver(resize).observe(stage);
+new ResizeObserver(layoutHand).observe(tray);
+resize();
+let last = performance.now();
+function frame(t){
+  const dt = Math.min(.033, (t - last)/1000); last = t;
+  update(dt); render(); tutorialUI();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
