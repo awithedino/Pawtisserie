@@ -36,6 +36,18 @@ body{background:var(--floor);color:var(--ink);font-family:var(--body);overflow:h
 .iconbtn{width:40px;height:40px;padding:0;border-radius:50%;border:2px solid var(--panel);background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}
 .iconbtn svg{width:20px;height:20px}
 .iconbtn:active{transform:rotate(-40deg);transition:transform .15s}
+.topr{display:flex;align-items:center;gap:8px}
+.stats{display:flex;align-items:center;gap:6px}
+.stat{display:flex;align-items:center;gap:5px;height:30px;padding:0 10px 0 7px;box-sizing:border-box;border-radius:999px;background:var(--card);border:2px solid var(--panel);
+  font-family:var(--display);font-weight:700;font-size:16px;line-height:1;font-variant-numeric:tabular-nums}
+.stat svg{width:17px;height:17px;flex:none}
+.stat.low{background:#e5484d;color:#fff;border-color:#a8262b;animation:lowpulse .8s ease-in-out infinite}
+.stat.low svg *{stroke:#fff}
+@keyframes lowpulse{50%{transform:scale(1.08)}}
+.stat.bump{animation:bump .45s ease}
+.modechip{height:30px;min-width:30px;padding:0 8px;border-radius:999px;border:2px dashed var(--muted);background:transparent;color:var(--muted);
+  font:inherit;font-weight:700;font-size:12px;letter-spacing:.04em;cursor:pointer}
+.modechip.b{border-style:solid;border-color:#4fb8c9;color:#2f8796;background:#e3f5f8}
 .stage{flex:1;min-height:0;position:relative}
 #game{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 
@@ -102,6 +114,17 @@ button:focus-visible{outline:3px solid #4fb8c9;outline-offset:2px}
 @keyframes glow{50%{box-shadow:0 0 0 4px var(--butter),0 0 18px 6px rgba(246,196,83,.6)}}
 .finger{position:fixed;left:0;top:0;width:46px;height:46px;pointer-events:none;z-index:60;margin:-4px 0 0 -14px}
 .finger svg{width:100%;height:100%;animation:tapbob 1s ease-in-out infinite;transform-origin:30% 10%;filter:drop-shadow(0 3px 3px rgba(74,44,42,.35))}
+.finger.drag svg{animation:none}
+.finger.drag::before{display:none}
+/* drag hint: a see-through copy of a hand card that slides onto the board */
+.hintcard{position:fixed;left:0;top:0;margin:0;pointer-events:none;z-index:55;translate:none!important;rotate:none!important;transition:none!important;
+  animation:none!important;transform-origin:50% 50%;box-shadow:0 12px 24px rgba(74,44,42,.25)}
+.lvgrid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.lvgrid .btn{padding:10px 0;font-family:var(--display);font-size:16px;position:relative}
+.lvgrid .btn.done::after{content:"✓";position:absolute;top:-7px;right:-5px;width:18px;height:18px;border-radius:50%;background:#3fb37f;color:#fff;font-size:11px;
+  display:grid;place-items:center;border:2px solid var(--panel)}
+.lvgrid .btn.cur{background:var(--butter)}
+button.lvl{border:0;cursor:pointer}
 .finger::before{content:"";position:absolute;left:6px;top:-4px;width:18px;height:18px;border-radius:50%;border:3px solid var(--butter);animation:ripple 1s ease-out infinite}
 @keyframes tapbob{0%,100%{transform:translate(0,0)}45%{transform:translate(0,7px) scale(.92)}}
 @keyframes ripple{0%,40%{transform:scale(.4);opacity:0}50%{opacity:1}100%{transform:scale(1.8);opacity:0}}
@@ -111,13 +134,26 @@ button:focus-visible{outline:3px solid #4fb8c9;outline-offset:2px}
 
 <div class="app">
   <div class="top">
-    <div class="lvl">
+    <button class="lvl" id="lvlBtn" type="button" title="Pick a level">
       <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#fffaf4"/><path d="M7 11 9 4l6 5M25 11l-2-7-6 5" fill="#f2a65a"/><ellipse cx="16" cy="18" rx="10" ry="8.5" fill="#f2a65a"/><path d="M11.5 17q1.5-1.6 3 0M17.5 17q1.5-1.6 3 0" stroke="#4a2c2a" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M15 20.2h2l-1 1.2z" fill="#ff9fb5"/></svg>
       <span id="lvl">LEVEL 1</span>
+    </button>
+    <div class="stats">
+      <span class="stat" id="sMoves" title="Cards left (hand + deck)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4a2c2a" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="12" height="16" rx="2.5" fill="#fffaf4"/><path d="M5 6.5v12a2.5 2.5 0 0 0 2.5 2.5H15"/><path d="M9.5 6.5h7" stroke="#ff7eb0" stroke-width="2.4" stroke-linecap="round"/></svg>
+        <b id="movesN">0</b>
+      </span>
+      <span class="stat" id="sBoxes" title="Boxes left to fill">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16v11H4z" fill="#fffaf4" stroke="#4a2c2a" stroke-width="2" stroke-linejoin="round"/><path d="M3 6.5h18V9H3z" fill="#ff7eb0" stroke="#4a2c2a" stroke-width="2" stroke-linejoin="round"/></svg>
+        <b id="boxesN">0</b>
+      </span>
     </div>
+    <div class="topr">
+    <button class="modechip" id="mode" type="button" title="Prototype mode. A: limited cards. B: endless cards, only a full cooling rack can fail you.">A</button>
     <button class="iconbtn" id="restart" type="button" aria-label="Restart level" title="Restart level">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
     </button>
+    </div>
   </div>
   <div class="stage" id="stage">
     <canvas id="game" aria-label="Bakery board: pastry boxes, display shelf and baking tray"></canvas>
@@ -142,11 +178,11 @@ button:focus-visible{outline:3px solid #4fb8c9;outline-offset:2px}
       <svg viewBox="0 0 24 24" fill="none" stroke="#4a2c2a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h3.5c4 0 6 10 10 10H21"/><path d="M3 17h3.5c1.6 0 2.8-1.6 3.9-3.5M13.6 10.5C14.7 8.6 15.9 7 17.5 7H21"/><path d="m18 4 3 3-3 3M18 14l3 3-3 3"/></svg>
       <span>Shuffle</span><b class="count">2</b>
     </button>
-    <button type="button" class="boost" id="bCall" title="Call the pastry box your plates need most">
+    <button type="button" class="boost" id="bCall" title="Call the pastry box your cooling rack needs most">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16v11H4z" fill="#fffaf4" stroke="#4a2c2a" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 6.5h18V9H3z" fill="#ff7eb0" stroke="#4a2c2a" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 6.5V20" stroke="#ff7eb0" stroke-width="2.4"/><path d="M12 6.5c-2-3-5-3-4.5-1s4.5 1 4.5 1 2.5-.4 4.5-1-2.5-2-4.5 1" fill="none" stroke="#4a2c2a" stroke-width="1.3"/></svg>
       <span>Call box</span><b class="count">2</b>
     </button>
-    <button type="button" class="boost" id="bStash" title="Stash: move every pastry on the plates into the tin; they go to their box first">
+    <button type="button" class="boost" id="bStash" title="Stash: move every pastry on the cooling rack into the tin; they go to their box first">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11" rx="3" fill="#9fd3c7" stroke="#4a2c2a" stroke-width="1.6"/><rect x="2.5" y="6" width="19" height="4.5" rx="2" fill="#6fb7a6" stroke="#4a2c2a" stroke-width="1.6"/><circle cx="12" cy="14.5" r="2.4" fill="#fffaf4" stroke="#4a2c2a" stroke-width="1.2"/></svg>
       <span>Stash</span><b class="count">1</b>
     </button>
@@ -160,9 +196,13 @@ const ctx = canvas.getContext('2d');
 const stage = document.getElementById('stage');
 const tray = document.getElementById('tray');
 const deckEl = document.getElementById('deck');
-const W = 400, CELL = 50, TRUCK_Y = 12, SOFT = 28, SOFT_CAP = 2, HAND = 5, BASE_CAP = 5, TAU = Math.PI*2;
+const W = 400, CELL = 50, TRUCK_Y = 12, HAND = 5, TAU = Math.PI*2;
+// Storage: one 7-slot cooling rack (internally `shelf`). It replaced 5 plates + a 2-slot combo rack;
+// bot tests showed it plays as hard as the old pair, with one rule fewer. Tests may change PLATE_CAP.
+let PLATE_CAP = 7;
+const SLOT = 42, SLOT_GAP = 5;
 // Vertical layout is recomputed per screen: spare height grows the box queue and the gaps.
-let H = 632, QUEUE_CY = 117, QH = 34, SHELF_Y = 140, SHELF_CY = 170, SOFT_Y = 206, SOFT_CY = 223, GRID_TOP = 262;
+let H = 632, QUEUE_CY = 117, QH = 34, SHELF_Y = 140, SHELF_CY = 170, GRID_TOP = 262;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const coarse = matchMedia('(pointer: coarse)').matches;
 const FONT = (px, w = 700) => `${w} ${px}px Fredoka, 'Arial Rounded MT Bold', system-ui, sans-serif`;
@@ -182,22 +222,61 @@ const CARDS = {
   drill: { name:'POUNCE', hint:'column',       band:'#4fb8c9' },
   box:   { name:'FLOP',   hint:'belly · 3×3',  band:'#f6c453' },
 };
-// gifts: box number (in arrival order, 0 = first box at the counter) -> card it carries
+// The tray is endless: hit pastries are replaced by new ones falling in from the top,
+// drawn from a seeded spawn bag. A level is won by filling its boxes; the deck is the move budget.
+// boxes: how many boxes to fill. help: extra copies of the counter boxes' colors in each spawn bag
+// (an easing knob, also the hook for difficulty adjustment). gifts: box number (in arrival order,
+// 0 = first box at the counter) -> card it adds to the deck when it leaves full.
+const CODE = { D:0, M:1, C:2, R:3 };
 const LEVELS = [
-  // Level 0: scripted tutorial. D = donut, M = macaron. TAP the center sends 5 donuts home,
-  // then two SWIPEs on the bottom rows finish the macaron box and the last donut box.
-  { tutorial:true, cols:3, rows:3, layout:['MDM','DDD','MDD'], boxes:[0,1,0], deck:['pop','sweep','sweep'], gifts:{} },
-  { cols:6, rows:6, colors:3, tnt:0, chained:0, seed:7,
-    deck:['pop','pop','sweep','pop','drill','pop','sweep','pop'], gifts:{ 2:'sweep', 5:'pop', 8:'box', 10:'pop' } },
-  { cols:7, rows:6, colors:4, tnt:3, chained:4, seed:19,
-    deck:['pop','box','pop','sweep','drill','pop','box','sweep'], gifts:{ 3:'drill', 6:'box', 9:'pop', 11:'sweep' } },
-  { cols:7, rows:7, colors:4, tnt:4, chained:8, seed:42,
-    deck:['pop','sweep','box','pop','drill','box','sweep','pop'], gifts:{ 2:'pop', 5:'box', 8:'sweep', 11:'drill', 13:'pop' } },
+  // Level 0: scripted tutorial. D = donut, M = macaron, C = cupcake, R = croissant.
+  // TAP the center sends 5 donuts home; the refill puts a macaron between two others, so a
+  // SWIPE on the middle row fills the macaron box; one more SWIPE finds the last donut.
+  { tutorial:true, cols:3, rows:3, colors:4, layout:['MDM','DDD','MDD'], boxes:[0,1,0], deck:['pop','sweep','sweep'], gifts:{},
+    spawns:'CCMRCMCM' },
+  // Levels 1-12. The curve is a sawtooth: each new element arrives on an easier level, then gets
+  // pushed; every few levels a spike, then relief. `goal` is the target win rate for a casual
+  // player, used to tune deck size and gift timing with a bot playing this exact code. The deck
+  // is a cliff (one card swings the win rate a lot), so gift timing is the fine knob.
+  { cols:6, rows:6, colors:3, tnt:0, chained:0, seed:7,  boxes:10, help:1, goal:.98, deck:['pop','sweep','pop','drill','pop'], gifts:{ 1:'sweep', 4:'pop', 7:'box' },
+    mix:['pop','sweep','pop','drill','pop','sweep','pop','box'], note:'Fill every box before your cards run out.' },
+  { cols:6, rows:6, colors:3, tnt:0, chained:0, seed:11, boxes:12, help:1, goal:.94, deck:['pop','pop','sweep','drill','pop','sweep','pop'], gifts:{ 7:'pop' },
+    mix:['pop','pop','sweep','drill','pop','sweep','pop','box'], note:'Gift boxes (the tag on a box) add a card to your deck when they leave full.' },
+  { cols:7, rows:6, colors:4, tnt:0, chained:0, seed:23, boxes:12, help:2, goal:.88, deck:['pop','sweep','pop','box','drill','pop'], gifts:{ 8:'sweep' },
+    mix:['pop','sweep','pop','box','drill','pop','sweep','pop'], note:'New pastry: the croissant. Four kinds now share three box spots.' },
+  { cols:7, rows:6, colors:4, tnt:2, chained:0, seed:31, boxes:13, help:2, goal:.88, deck:['pop','sweep','pop','drill','box','pop','sweep','pop'], gifts:{ 2:'sweep', 5:'box', 9:'pop' },
+    mix:['pop','sweep','pop','drill','box','pop','sweep','pop'], note:'New: cream cans. Hit one and it splats the tiles around it, for free.' },
+  { cols:7, rows:6, colors:4, tnt:0, chained:5, seed:37, boxes:13, help:2, goal:.8, deck:['box','pop','sweep','pop','drill','pop'], gifts:{ 3:'pop', 8:'drill' },
+    mix:['box','pop','sweep','pop','drill','pop','box','sweep'], note:'New: glass cloches. The first hit cracks the glass; the second frees the pastry.' },
+  { cols:7, rows:7, colors:4, tnt:3, chained:6, seed:42, boxes:15, help:1, goal:.6, deck:['pop','sweep','box','pop','drill','sweep','pop'], gifts:{ 13:'sweep' },
+    mix:['pop','sweep','box','pop','drill','sweep','pop','box'], note:'Cans and cloches together. Plan your big cards.' },
+  { cols:6, rows:6, colors:3, tnt:0, chained:0, seed:53, boxes:14, help:1, goal:.92, dough:[2,2,1,1,1], deck:['box','pop','box','sweep','pop','box','drill'], gifts:{ 7:'pop' },
+    mix:['box','pop','box','sweep','pop','box','drill','pop'], note:'New: dough lumps. Each hit kneads away one layer, and they fall like pastries. A FLOP kneads nine tiles at once!' },
+  { cols:7, rows:7, colors:4, tnt:3, chained:0, seed:61, boxes:16, help:1, goal:.75, crust:[[0,0,6,1]], deck:['pop','drill','pop','sweep','pop','box','pop','sweep'], gifts:{ 3:'drill', 7:'pop', 11:'sweep' },
+    mix:['pop','drill','pop','sweep','pop','box','pop','sweep'], note:'New: a crust lid. It keeps fresh pastries out of the tray until you break it. One SWIPE breaks a whole row.' },
+  { cols:7, rows:7, colors:4, tnt:0, chained:6, seed:67, boxes:16, help:1, goal:.7, cookies:['sweep','pop','box'], deck:['box','sweep','pop','box','drill','sweep'], gifts:{ 3:'sweep', 8:'pop', 15:'box' },
+    mix:['box','sweep','pop','box','drill','sweep','pop','pop'], note:'New: fortune cookies. Crack one in 3 hits and it gives you the card written inside.' },
+  { cols:7, rows:7, colors:4, tnt:4, chained:8, seed:73, boxes:18, help:0, goal:.55, crust:[[0,0,1,1],[0,2,4,2],[0,5,6,1]], deck:['pop','sweep','box','pop','drill','box','sweep','pop','pop'], gifts:{ 5:'sweep', 8:'drill', 12:'pop', 15:'box' },
+    mix:['pop','sweep','box','pop','drill','box','sweep','pop'], note:'A hard one. The crust lid is thicker in the middle: open the sides, or dig through the center?' },
+  { cols:6, rows:7, colors:4, tnt:2, chained:3, seed:79, boxes:14, help:2, goal:.88, pins:[[0,2,3],[4,2,3]], deck:['pop','sweep','pop','drill','pop','box','sweep','pop'], gifts:{ 5:'sweep', 8:'pop', 11:'pop' },
+    mix:['pop','sweep','pop','drill','pop','box','sweep','pop'], note:'New: rolling pins. A card\u2019s sideways reach stops at a pin. POUNCE still goes straight down.' },
+  { cols:7, rows:7, colors:4, tnt:4, chained:8, seed:89, boxes:20, help:0, goal:.45, dough:[2,2], cookies:['box'], pins:[[1,3,2],[4,2,2]], deck:['box','pop','sweep','drill','pop','box','sweep','pop'], gifts:{ 5:'pop', 10:'pop', 17:'box' },
+    mix:['box','pop','sweep','drill','pop','box','sweep','pop'], note:'Boss order! Twenty boxes for the grand opening, with everything in the kitchen.', boss:true },
 ];
+// Mode B (a prototype toggle): no deck. The hand is a tray of 3 cards that refills when empty,
+// like Block Blast, so only space (a full cooling rack) can fail you.
+const B_POOL = ['pop','pop','pop','sweep','sweep','drill','drill','box'];
+let mode = 'A';
+try {
+  const q = new URLSearchParams(location.search).get('mode');
+  const saved = (() => { try { return localStorage.getItem('pawtisserie.mode'); } catch(e){ return null; } })();
+  mode = String(q || saved || 'A').toUpperCase() === 'B' ? 'B' : 'A';
+} catch(e){}
+let modeB = false, spawnRng, cardRng, bag = [], spawnQueue = [], dda = 0;   // dda: extra spawn help, for difficulty adjustment later
 const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
 
-let levelIdx, L, cols, rows, gx, grid, lanes, queue, shelf, soft, capacity, overflow;
-let flyers, droppers, afterfx, particles, rings, beams, texts, events, now = 0, state, shake = 0, softOpen = 0, settled = true;
+let levelIdx, L, cols, rows, gx, grid, lanes, queue, shelf, capacity, overflow;
+let flyers, droppers, afterfx, particles, rings, beams, texts, events, now = 0, state, shake = 0, settled = true;
 let hand, draw, selected = null, hover = null, drag = null, cardSeq = 0, prevIds = new Set();
 let aim = null, aimPointer = null;
 let tut = null;   // tutorial state while Level 0 runs: { step, pending }
@@ -222,18 +301,25 @@ function rr(x,y,w,h,r){
 function ell(x, y, rx, ry, fill){ ctx.fillStyle = fill; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); ctx.fill(); }
 const laneX = i => 10 + i*128;
 const truckX = i => laneX(i) + 10;
-const slotSize = () => Math.min(48, Math.floor((W - 20 - (capacity-1)*6) / capacity));
-function shelfLeft(){ const S = slotSize(); return (W - (capacity*S + (capacity-1)*6))/2; }
-const slotX = i => shelfLeft() + i*(slotSize()+6) + slotSize()/2;
-const softLeft = () => (W - (SOFT_CAP*SOFT + (SOFT_CAP-1)*6))/2;
-const softX = i => softLeft() + i*(SOFT+6) + SOFT/2;
+const slotSize = () => Math.min(SLOT, Math.floor((W - 24 - (capacity-1)*SLOT_GAP) / capacity));
+const rackW = () => capacity*slotSize() + (capacity-1)*SLOT_GAP;
+// the rack slides left while the stash tin is out, to make room for it
+function shelfLeft(){ const c = (W - rackW())/2; return c - stashShow*Math.max(0, c - 12); }
+const slotX = i => shelfLeft() + i*(slotSize()+SLOT_GAP) + slotSize()/2;
 const cellX = c => gx + c*CELL + 25;
 const cellY = r => GRID_TOP + r*CELL + 25;
 const card = type => ({ type, id: ++cardSeq });
 
+// Rolling pins are walls on the right edge of a tile ('r,c' = between column c and c+1).
+// A shape's sideways reach stops at a pin; up and down is never blocked, and pins don't stop falling.
+let walls = new Set();
+function blockedH(r, ca, cb){
+  for (let k = Math.min(ca, cb); k < Math.max(ca, cb); k++) if (walls.has(r + ',' + k)) return true;
+  return false;
+}
 function shapeCells(type, r, c){
   const out = [];
-  const add = (r2, c2) => { if (r2 >= 0 && r2 < rows && c2 >= 0 && c2 < cols) out.push([r2, c2]); };
+  const add = (r2, c2) => { if (r2 >= 0 && r2 < rows && c2 >= 0 && c2 < cols && !blockedH(r2, c, c2)) out.push([r2, c2]); };
   if (type === 'pop'){ add(r,c); for (const [dr,dc] of D4) add(r+dr, c+dc); }
   else if (type === 'sweep'){ for (let k = 0; k < cols; k++) add(r, k); }
   else if (type === 'drill'){ for (let k = 0; k < rows; k++) add(k, c); }
@@ -244,76 +330,139 @@ function shapeCells(type, r, c){
 // ---------- level setup ----------
 function newDock(item){ return { color:item.color, gift:item.gift, need:3, reserved:0, filled:0, spots:[false,false,false], state:'arriving', oy:-110, sp:0, bounce:0, closed:false }; }
 
+// The next pastry to fall in. Scripted spawns come first (the tutorial), then a seeded bag
+// with 3 of each color, plus `help` extra copies of each counter box's color.
+// Only types that still have a box to fill spawn, so the last boxes never drown in pastries nobody wants.
+function activeColors(){
+  const s = new Set();
+  if (lanes) for (const d of lanes) if (d && !d.closing && d.state !== 'leaving') s.add(d.color);
+  if (queue) for (const q of queue) s.add(q.color);
+  if (!s.size) for (let c = 0; c < L.colors; c++) s.add(c);
+  return s;
+}
+function nextColor(){
+  if (spawnQueue.length) return spawnQueue.shift();
+  const act = activeColors();
+  bag = bag.filter(c => act.has(c));
+  if (!bag.length){
+    for (const c of act) for (let k = 0; k < 3; k++) bag.push(c);
+    const help = (L.help || 0) + dda;
+    if (help && lanes) for (const d of lanes) if (d && !d.closing) for (let k = 0; k < help; k++) bag.push(d.color);
+    shuffle(bag, spawnRng);
+  }
+  return bag.pop();
+}
+// True once every remaining box already has all its pastries on the way: the level is as good as won.
+const allBoxesClaimed = () => !queue.length && lanes.every(d => !d || d.reserved >= d.need);
+const newPastry = (color, c, y) => ({ kind:'crate', color, chain:0, x: cellX(c), y, vy:0, squash:0, hit:0 });
+function dealB(){ return [0,1,2].map(() => card(B_POOL[Math.floor(cardRng()*B_POOL.length)])); }
+
 function loadLevel(i){
   levelIdx = i; L = LEVELS[i];
-  const rng = mulberry32(L.seed);
   cols = L.cols; rows = L.rows; gx = (W - cols*CELL)/2;
   layout();
-  if (L.tutorial){ loadTutorial(); return; }
-  tut = null;
-  const crates = cols*rows - L.tnt, units = crates/3;
-  const per = Array.from({length:L.colors}, () => Math.floor(units/L.colors));
-  for (let c = 0; c < units % L.colors; c++) per[c]++;
-  const colorList = [];
-  per.forEach((u,c) => { for (let k = 0; k < u*3; k++) colorList.push(c); });
-  shuffle(colorList, rng);
+  const seed = L.seed || 1, rng = mulberry32(seed);
+  spawnRng = mulberry32((seed*7919 + 13) >>> 0); cardRng = mulberry32((seed*104729 + 7) >>> 0);
+  bag = []; spawnQueue = [...(L.spawns || '')].map(ch => CODE[ch]);
+  modeB = mode === 'B' && !L.tutorial;
+  tut = L.tutorial ? { step: 1, pending: false } : null;
 
-  const cells = [];
-  for (let r = 1; r < rows; r++) for (let c = 0; c < cols; c++) cells.push([r,c]);
-  shuffle(cells, rng);
-  const tntSet = new Set();
-  for (const [r,c] of cells){
-    if (tntSet.size >= L.tnt) break;
-    if (D4.some(([dr,dc]) => tntSet.has((r+dr)+','+(c+dc)))) continue;
-    tntSet.add(r+','+c);
-  }
-
-  grid = []; let ci = 0; const crateEnts = [];
-  for (let r = 0; r < rows; r++){
-    const row = [];
-    for (let c = 0; c < cols; c++){
-      const e = tntSet.has(r+','+c) ? { kind:'tnt' } : { kind:'crate', color: colorList[ci++], chain:0 };
-      if (e.kind === 'crate') crateEnts.push(e);
-      e.x = cellX(c); e.y = cellY(r) - 480 - (rows-1-r)*26; e.vy = 0; e.squash = 0; e.hit = 0;
-      row.push(e);
+  // boxes first, so the spawn bag can lean toward the boxes at the counter
+  if (L.tutorial) queue = L.boxes.map(color => ({ color, gift:null }));
+  else {
+    const order = [];
+    for (let k = 0; k < L.boxes; k++) order.push(k % L.colors);
+    shuffle(order, rng);
+    for (let k = 1; k < 3; k++){
+      const head = order.slice(0,k);
+      if (head.includes(order[k])){
+        const j = order.findIndex((q,idx) => idx > k && !head.includes(q));
+        if (j > 0) [order[k], order[j]] = [order[j], order[k]];
+      }
     }
-    grid.push(row);
+    queue = order.map((color, idx) => ({ color, gift: modeB ? null : (L.gifts[idx] || null) }));
   }
-  shuffle(crateEnts, rng).slice(0, L.chained).forEach(e => e.chain = 1);
-
-  const order = [];
-  per.forEach((u,c) => { for (let k = 0; k < u; k++) order.push(c); });
-  shuffle(order, rng);
-  for (let k = 1; k < 3; k++){
-    const head = order.slice(0,k);
-    if (head.includes(order[k])){
-      const j = order.findIndex((q,idx) => idx > k && !head.includes(q));
-      if (j > 0) [order[k], order[j]] = [order[j], order[k]];
-    }
-  }
-  queue = order.map((color, idx) => ({ color, gift: L.gifts[idx] || null }));
   lanes = [0,1,2].map(i => { if (!queue.length) return null; const d = newDock(queue.shift()); d.oy = -110 - i*40; return d; });
 
-  capacity = BASE_CAP; shelf = []; soft = []; overflow = []; softOpen = 0; stash = []; stashShow = 0; express = null;
+  if (L.tutorial){
+    grid = L.layout.map((line, r) => [...line].map((ch, c) => newPastry(CODE[ch], c, cellY(r) - 420 - (rows-1-r)*26)));
+  } else {
+    const cells = [];
+    for (let r = 1; r < rows; r++) for (let c = 0; c < cols; c++) cells.push([r,c]);
+    shuffle(cells, rng);
+    const tntSet = new Set();
+    for (const [r,c] of cells){
+      if (tntSet.size >= L.tnt) break;
+      if (D4.some(([dr,dc]) => tntSet.has((r+dr)+','+(c+dc)))) continue;
+      tntSet.add(r+','+c);
+    }
+    grid = []; const crateEnts = [];
+    for (let r = 0; r < rows; r++){
+      const row = [];
+      for (let c = 0; c < cols; c++){
+        const y = cellY(r) - 480 - (rows-1-r)*26;
+        let e;
+        if (tntSet.has(r+','+c)) e = { kind:'tnt', x: cellX(c), y, vy:0, squash:0, hit:0 };
+        else { e = newPastry(nextColor(), c, y); crateEnts.push(e); }
+        row.push(e);
+      }
+      grid.push(row);
+    }
+    shuffle(crateEnts, rng).slice(0, L.chained).forEach(e => e.chain = 1);
+    // dough lumps (layers each) and fortune cookies (card each) replace pastries on free tiles
+    const free = cells.filter(([r,c]) => !tntSet.has(r+','+c) && grid[r][c].kind === 'crate' && !grid[r][c].chain);
+    let fi = 0;
+    for (const layers of (L.dough || [])){ const [r,c] = free[fi++]; const old = grid[r][c]; grid[r][c] = { kind:'dough', layers, x: old.x, y: old.y, vy:0, squash:0, hit:0 }; }
+    for (const cardType of (L.cookies || [])){ const [r,c] = free[fi++]; const old = grid[r][c]; grid[r][c] = { kind:'cookie', hits:3, card: cardType, x: old.x, y: old.y, vy:0, squash:0, hit:0 }; }
+  }
+  // hard crust: [row, firstCol, lastCol, layers]; replaces whatever was generated there
+  if (!L.tutorial) for (const [cr, c0, c1, layers] of (L.crust || [])) for (let c = c0; c <= c1; c++){
+    const old = grid[cr][c];
+    grid[cr][c] = { kind:'crust', layers, x: old.x, y: old.y, vy:0, squash:0, hit:0 };
+  }
+  walls = new Set();
+  for (const [r0, c0, len] of (L.pins || [])) for (let k = 0; k < len; k++) walls.add((r0 + k) + ',' + c0);
+
+  capacity = PLATE_CAP; shelf = []; overflow = []; stash = []; stashShow = 0; express = null;
   flyers = []; droppers = []; afterfx = []; particles = []; rings = []; beams = []; texts = []; events = [];
-  draw = L.deck.map(card); hand = draw.splice(0, HAND); selected = null; aim = null; aimPointer = null; prevIds = new Set();
-  state = 'play'; overflowShown = false;
-  document.getElementById('lvl').textContent = `LEVEL ${i}`;
-  hidePanel(); renderHand();
+  if (modeB){ draw = []; hand = dealB(); }
+  else { draw = L.deck.map(card); hand = draw.splice(0, HAND); }
+  selected = null; aim = null; aimPointer = null; prevIds = new Set();
+  overflowShown = false;
+  document.getElementById('lvl').textContent = L.tutorial ? 'TUTORIAL' : `LEVEL ${i}`;
+  hidePanel();
+  if (L.tutorial){ state = 'play'; renderHand(); }
+  else { state = 'intro'; renderHand(); showIntro(); }
 }
-function loadTutorial(){
-  const code = { D:0, M:1, C:2, R:3 };
-  grid = L.layout.map((line, r) => [...line].map((ch, c) => ({ kind:'crate', color: code[ch], chain:0, x: cellX(c), y: cellY(r) - 420 - (rows-1-r)*26, vy:0, squash:0, hit:0 })));
-  queue = L.boxes.map(color => ({ color, gift:null }));
-  lanes = [0,1,2].map(i => { if (!queue.length) return null; const d = newDock(queue.shift()); d.oy = -110 - i*40; return d; });
-  capacity = BASE_CAP; shelf = []; soft = []; overflow = []; softOpen = 0; stash = []; stashShow = 0; express = null;
-  flyers = []; droppers = []; afterfx = []; particles = []; rings = []; beams = []; texts = []; events = [];
-  draw = L.deck.map(card); hand = draw.splice(0, HAND); selected = null; aim = null; aimPointer = null; prevIds = new Set();
-  state = 'play'; overflowShown = false;
-  tut = { step: 1, pending: false };
-  document.getElementById('lvl').textContent = 'TUTORIAL';
-  hidePanel(); renderHand();
+// Level start card: states the goal and the budget up front, so the card count reads as a limit.
+function showIntro(){
+  const goal = modeB
+    ? `Fill ${L.boxes} boxes. Cards never run out, but don't let the cooling rack overflow.`
+    : `Fill ${L.boxes} boxes with ${L.deck.length} cards.`;
+  showPanel(L.boss ? `Level ${levelIdx}: Boss` : `Level ${levelIdx}`, goal + (L.note ? ' ' + L.note : ''),
+    [{ label:'Play', primary:true, onClick: () => { state = 'play'; hidePanel(); renderHand(); lastInput = now; } }]);
 }
+// Cleared levels are remembered in this browser only, to mark them in the level picker.
+let cleared = new Set();
+try { cleared = new Set(JSON.parse(localStorage.getItem('pawtisserie.cleared') || '[]')); } catch(e){}
+function markCleared(i){
+  cleared.add(i);
+  try { localStorage.setItem('pawtisserie.cleared', JSON.stringify([...cleared])); } catch(e){}
+}
+// Playtest helper: tap the level pill to jump to any level.
+function showLevels(){
+  if (drag) cancelDrag();
+  const prev = state;
+  if (state === 'play') state = 'paused';
+  const btns = LEVELS.map((lv, i) => ({ label: i === 0 ? 'T' : String(i), cls: [cleared.has(i) ? 'done' : '', i === levelIdx ? 'cur' : ''].join(' '),
+    aria: i === 0 ? 'Tutorial' : `Level ${i}${cleared.has(i) ? ', cleared' : ''}`, onClick: () => { cancelDrag(); loadLevel(i); } }));
+  btns.push({ label:'Close', wide:true, onClick: () => {
+    if (prev === 'play'){ hidePanel(); state = 'play'; renderHand(); }
+    else loadLevel(levelIdx);   // reopens the intro card, or restarts a finished level
+  } });
+  showPanel('Levels', `${LEVELS.length - 1} levels plus the tutorial (T). Mode ${mode}: ${mode === 'B' ? 'endless cards' : 'limited cards'}.`, btns, { grid:true });
+}
+document.getElementById('lvlBtn').addEventListener('click', showLevels);
 // Which tiles the current tutorial step accepts, and which card it wants.
 function tutCells(){
   if (!tut) return null;
@@ -332,11 +481,27 @@ function findEnt(ent){
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (grid[r][c] === ent) return { r, c };
   return null;
 }
+// Pastries fall, then new ones drop in from above the tray to fill every empty tile.
+// Hard crust is static: it splits a column into segments. Each segment settles on its own, and only the
+// top segment refills, so the pocket under a crust keeps just the pastries it has until the crust breaks.
+const isCrust = e => e && e.kind === 'crust';
 function applyGravity(){
   for (let c = 0; c < cols; c++){
-    const stack = [];
-    for (let r = rows-1; r >= 0; r--) if (grid[r][c]) stack.push(grid[r][c]);
-    for (let r = rows-1, k = 0; r >= 0; r--, k++) grid[r][c] = stack[k] || null;
+    let bottom = rows - 1;
+    for (let r = rows - 1; r >= -1; r--){
+      if (r >= 0 && !isCrust(grid[r][c])) continue;
+      const top = r + 1;
+      if (top <= bottom){
+        const stack = [];
+        for (let k = bottom; k >= top; k--) if (grid[k][c]) stack.push(grid[k][c]);
+        for (let k = bottom, j = 0; k >= top; k--, j++) grid[k][c] = stack[j] || null;
+        if (r === -1){
+          const empty = (bottom - top + 1) - stack.length;
+          for (let k = top + empty - 1; k >= top; k--) grid[k][c] = newPastry(nextColor(), c, cellY(k) - empty*CELL - 12);
+        }
+      }
+      bottom = r - 1;
+    }
   }
 }
 function findDock(color){
@@ -349,35 +514,37 @@ function findDock(color){
 }
 // Where a shelf item belongs right now. Items are looked up by identity, so
 // compaction and rack-to-shelf moves retarget pastries that are still in the air.
-const tinX = () => shelfLeft() + capacity*slotSize() + (capacity-1)*6 + 14;
+const tinX = () => shelfLeft() + rackW() + 12;
 function stashPos(i){
   const k = Math.min(i, 3), x0 = tinX();
-  return { x: x0 + 14 + (k % 2)*24, y: SHELF_CY - 9 + Math.floor(k/2)*22, s: 20 };
+  return { x: x0 + 13 + (k % 2)*22, y: SHELF_CY - 9 + Math.floor(k/2)*22, s: 20 };
 }
 function itemTarget(it){
   let j = stash.indexOf(it); if (j >= 0) return stashPos(j);
   let i = shelf.indexOf(it); if (i >= 0) return { x: slotX(i), y: SHELF_CY - 3, s: slotSize() - 8 };
-  i = soft.indexOf(it); if (i >= 0) return { x: softX(i), y: SOFT_CY - 2, s: 26 };
   return { x: it.px ?? W/2, y: it.py ?? SHELF_CY, s: it.s ?? 40 };
 }
 function destPos(dest){
   if (dest.kind === 'dock') return { x: truckX(dest.lane) + 20 + dest.k*32, y: TRUCK_Y + dest.dock.oy + 44, s: 28 };
   if (dest.kind === 'item') return itemTarget(dest.item);
   if (dest.kind === 'express') return express ? { x: express.x - 30 + (dest.k % 5)*15, y: express.y - 4, s: 22 } : { x: W/2, y: SHELF_CY, s: 22 };
-  return { x: softX(SOFT_CAP-1) + 40 + dest.idx*34, y: SOFT_CY, s: 30 };
+  return { x: W/2 - 50 + dest.idx*34, y: SHELF_Y + 76, s: 30 };
 }
 function launch(color, sx, sy, s0, dest, dur, arc){
   flyers.push({ color, sx, sy, s0, dest, t:0, dur: dur || rand(.5,.66), arc: arc ?? rand(55,95), spin: rand(-6,6) });
 }
 function launchCrate(ent){
   let dest = findDock(ent.color);
+  if (!dest && allBoxesClaimed()){
+    // finishing move: leftovers pop into sugar instead of crowding the rack
+    sparks(ent.x, ent.y, [PASTRY[ent.color].light, '#ffffff'], 10, 220);
+    dust(ent.x, ent.y, PASTRY[ent.color].light, 6);
+    return;
+  }
   if (!dest){
     const item = { color: ent.color, landed:false };
     if (shelf.length < capacity){ shelf.push(item); dest = { kind:'item', item }; }
-    else if (soft.length < SOFT_CAP){
-      soft.push(item); dest = { kind:'item', item };
-      if (soft.length === 1) texts.push({ x: W/2, y: SOFT_Y + 4, text:'COOLING RACK', t:0, life:.9, color: RACK.light });
-    } else {
+    else {
       dest = { kind:'over', idx: overflow.length };
       overflow.push({ color: ent.color, landed:false });
       if (state === 'play'){ state = 'lost'; cancelDrag(); }
@@ -387,6 +554,38 @@ function launchCrate(ent){
   dust(ent.x, ent.y, PASTRY[ent.color].light, 5);
 }
 function hitCrate(ent, r, c){
+  if (ent.kind === 'crust'){
+    ent.layers--; ent.hit = 1;
+    sparks(ent.x, ent.y, ['#c98a4a','#f2c78a','#8a5528'], 12, 210);
+    if (ent.layers <= 0){ grid[r][c] = null; dust(ent.x, ent.y, '#f2c78a', 8); rings.push({ x: ent.x, y: ent.y, t: 0, life: .35, max: 40 }); }
+    else texts.push({ x: ent.x, y: ent.y - 18, text:'CRUNCH', t:0, life:.6, color:'#f2c78a' });
+    return;
+  }
+  if (ent.kind === 'dough'){
+    ent.layers--; ent.hit = 1; ent.squash = 1;
+    sparks(ent.x, ent.y, ['#f3dcb5','#fff6e6','#e3c393'], 10, 170);
+    dust(ent.x, ent.y, '#fff6e6', 6);
+    if (ent.layers <= 0){ grid[r][c] = null; rings.push({ x: ent.x, y: ent.y, t: 0, life: .35, max: 40 }); }
+    else texts.push({ x: ent.x, y: ent.y - 18, text:'KNEAD', t:0, life:.6, color:'#f3dcb5' });
+    return;
+  }
+  if (ent.kind === 'cookie'){
+    ent.hits--; ent.hit = 1;
+    sparks(ent.x, ent.y, ['#f2b35c','#ffe3a8','#c98a3a'], 10, 190);
+    if (ent.hits <= 0){
+      grid[r][c] = null;
+      sparks(ent.x, ent.y, ['#fff3c4','#ffffff', CARDS[ent.card].band], 18, 260);
+      rings.push({ x: ent.x, y: ent.y, t: 0, life: .45, max: 56 });
+      texts.push({ x: ent.x, y: ent.y - 22, text: '+1 ' + CARDS[ent.card].name, t:0, life:1.1, color: CARDS[ent.card].band });
+      if (state === 'play'){
+        if (modeB) hand.push(card(ent.card));
+        else { draw.push(card(ent.card)); while (hand.length < HAND && draw.length) hand.push(draw.shift()); }
+        renderHand();
+        deckEl.classList.remove('bump'); void deckEl.offsetWidth; deckEl.classList.add('bump');
+      }
+    } else texts.push({ x: ent.x, y: ent.y - 18, text:'CRACK', t:0, life:.6, color:'#ffe3a8' });
+    return;
+  }
   if (ent.chain > 0){
     ent.chain--; ent.hit = 1;
     sparks(ent.x, ent.y, ['#e8f6ff','#ffffff','#c7e6f7'], 12, 200);
@@ -420,7 +619,8 @@ function explodeAt(r, c, type, x, y){
 function useCard(i, cell){
   const cd = hand[i]; if (!cd) return;
   hand.splice(i, 1);
-  if (draw.length) hand.push(draw.shift());
+  if (modeB){ if (!hand.length) hand = dealB(); }
+  else if (draw.length) hand.push(draw.shift());
   selected = null; aim = null; aimPointer = null; buzz(15);
   if (tut && tut.step < 3) tut.pending = true;
   const tx = cellX(cell.c), ty = cellY(cell.r);
@@ -448,7 +648,7 @@ function land(f){
     if (express && express.state !== 'out'){ const p = destPos(d); toExpress(f.color, p.x, p.y, p.s); return; }
     const o = overflow[d.idx];
     if (o){ const p = destPos(d); o.landed = true; o.px = p.x; o.py = p.y; }
-    if (!overflowShown){ overflowShown = true; shake += reduceMotion ? 1 : 6; schedule(.55, () => showSpaceFail(false)); }
+    if (!overflowShown){ overflowShown = true; shake += reduceMotion ? 1 : 6; schedule(.55, showSpaceFail); }
   }
 }
 function closeDock(dk, delay){
@@ -457,42 +657,9 @@ function closeDock(dk, delay){
   schedule(delay, () => { dk.closed = true; dk.bounce = 1; const i = lanes.indexOf(dk); if (i >= 0) dust(truckX(i) + 52, TRUCK_Y + dk.oy + 18, '#ffffff', 8); });
   schedule(delay + .32, () => { dk.state = 'leaving'; dk.sp = 0; });
 }
-// Boxes must match the pastries still in play. After an Express box (or any other
-// mismatch), surplus boxes leave the queue, a part-filled box at the counter closes
-// with what it has, and an empty one leaves. Gift cards move to a box that stays.
-function reconcileBoxes(){
-  const supply = {};
-  for (const row of grid) for (const e of row) if (e && e.kind === 'crate') supply[e.color] = (supply[e.color] || 0) + 1;
-  for (const it of [...stash, ...shelf, ...soft]) supply[it.color] = (supply[it.color] || 0) + 1;
-  const lostGifts = [];
-  for (let c = 0; c < PASTRY.length; c++){
-    const docks = lanes.filter(d => d && d.color === c && d.state !== 'leaving' && !d.closing);
-    let room = 0; for (const d of docks) room += d.need - d.reserved;
-    const qIdx = []; queue.forEach((q, i) => { if (q.color === c) qIdx.push(i); });
-    let excess = room + qIdx.length*3 - (supply[c] || 0);
-    for (let k = qIdx.length - 1; k >= 0 && excess >= 3; k--){
-      const q = queue.splice(qIdx[k], 1)[0];
-      if (q.gift) lostGifts.push(q.gift);
-      excess -= 3;
-    }
-    for (const d of docks){
-      if (excess <= 0) break;
-      const cut = Math.min(d.need - d.reserved, excess);
-      d.need -= cut; excess -= cut;
-      if (d.need === 0){ if (d.gift){ lostGifts.push(d.gift); d.gift = null; } d.state = 'leaving'; d.sp = 0; }
-      else if (d.filled === d.need) closeDock(d, .2);
-    }
-  }
-  for (const g of lostGifts){
-    const keep = [...lanes.filter(d => d && d.state !== 'leaving'), ...queue].find(b => !b.gift);
-    if (keep) keep.gift = g;
-    else { draw.push(card(g)); while (hand.length < HAND && draw.length) hand.push(draw.shift()); renderHand(); }
-  }
-}
-// Shelf pastries go to their box as soon as it is ready. A cleared plate makes
-// the shelf slide left, and the cooling rack refills the shelf at once.
+// Stash and rack pastries go to their box as soon as it is ready; the rack then slides left.
 function pumpShelves(){
-  for (const arr of [stash, shelf, soft]){
+  for (const arr of [stash, shelf]){
     for (let i = 0; i < arr.length; i++){
       const it = arr[i];
       if (!it.landed) continue;
@@ -502,13 +669,9 @@ function pumpShelves(){
       launch(it.color, it.px, it.py, it.s, dest);
     }
   }
-  while (shelf.length < capacity && soft.length){
-    const it = soft.shift();
-    shelf.push(it);
-    if (it.landed){ it.landed = false; launch(it.color, it.px, it.py, it.s, { kind:'item', item: it }, .34, 30); }
-  }
 }
-function crateCount(){ let n = 0; for (const row of grid) for (const e of row) if (e && e.kind === 'crate') n++; return n; }
+// Boxes still to fill: the queue plus boxes at the counter that are not closing.
+function boxesLeft(){ return queue.length + lanes.filter(d => d && !d.closing && d.state !== 'leaving').length; }
 // A gift box drops its card into the deck when it leaves full.
 function boxDone(d, lane){
   if (!d.gift || state !== 'play') return;
@@ -527,19 +690,23 @@ function isSettled(){
 
 // Predict where each pastry in a move would go, for the aim preview.
 function predict(type, r, c){
-  const free = {}; let shelfFree = capacity - shelf.length, softFree = SOFT_CAP - soft.length;
+  const free = {}; let shelfFree = capacity - shelf.length;
   for (const d of lanes) if (d && d.state === 'ready') free[d.color] = (free[d.color] || 0) + (3 - d.reserved);
-  const marks = []; let toTruck = 0, toShelf = 0, toSoft = 0, over = 0;
+  const marks = []; let toTruck = 0, toShelf = 0, over = 0, dough = 0, cookies = 0, crust = 0;
+  const lastBoxes = !queue.length && lanes.every(d => !d || d.state === 'ready');
   for (const [r2, c2] of shapeCells(type, r, c)){
     const e = grid[r2][c2]; if (!e) continue;
     if (e.kind === 'tnt'){ marks.push({ r:r2, c:c2, k:'tnt' }); continue; }
+    if (e.kind === 'dough'){ marks.push({ r:r2, c:c2, k:'dough' }); dough++; continue; }
+    if (e.kind === 'crust'){ marks.push({ r:r2, c:c2, k:'dough' }); crust++; continue; }
+    if (e.kind === 'cookie'){ if (e.hits <= 1){ marks.push({ r:r2, c:c2, k:'cookie' }); cookies++; } else marks.push({ r:r2, c:c2, k:'crack' }); continue; }
     if (e.chain){ marks.push({ r:r2, c:c2, k:'crack' }); continue; }
     if (free[e.color] > 0){ free[e.color]--; toTruck++; marks.push({ r:r2, c:c2, k:'truck' }); }
+    else if (lastBoxes && Object.values(free).every(v => v <= 0)) continue;   // finishing move: leftovers pop
     else if (shelfFree > 0){ shelfFree--; toShelf++; marks.push({ r:r2, c:c2, k:'shelf' }); }
-    else if (softFree > 0){ softFree--; toSoft++; marks.push({ r:r2, c:c2, k:'soft' }); }
     else { over++; marks.push({ r:r2, c:c2, k:'over' }); }
   }
-  return { marks, toTruck, toShelf, toSoft, over };
+  return { marks, toTruck, toShelf, over, dough, cookies, crust };
 }
 
 // ---------- effects ----------
@@ -661,7 +828,7 @@ function update(dt){
     else if (express.state === 'wait'){ if (express.got >= Math.max(express.want, express.expect) && express.t > .9){ express.state = 'out'; express.sp = 0; } }
     else { express.sp += 1600*dt; express.x += express.sp*dt; if (express.x > W + 120) express = null; }
   }
-  for (const arr of [stash, shelf, soft]) for (const it of arr){
+  for (const arr of [stash, shelf]) for (const it of arr){
     if (!it.landed) continue;
     const p = itemTarget(it);
     it.px += (p.x - it.px)*k; it.py += (p.y - it.py)*k; it.s += (p.s - it.s)*k;
@@ -676,22 +843,15 @@ function update(dt){
   shake = Math.max(0, shake - dt*40);
 
   settled = isSettled();
-  const want = (!settled && state === 'play') || soft.length ? 1 : 0;
-  softOpen += (want - softOpen) * Math.min(1, dt*(want ? 12 : 6));
 
   if (state === 'play' && settled && tut && tut.pending){
     tut.pending = false; tut.step++; renderHand();
   }
   if (state === 'play' && settled){
-    reconcileBoxes();
-    const crates = crateCount();
-    if (soft.length){
-      state = 'lost'; cancelDrag(); shake += reduceMotion ? 1 : 6;
-      showSpaceFail(true);
-    } else if (!crates && !shelf.length && !stash.length){
+    if (!queue.length && lanes.every(d => !d)){
       state = 'won'; cancelDrag(); confetti(); renderHand();
       schedule(.7, showWin);
-    } else if (crates && !hand.length){
+    } else if (!hand.length){
       state = 'lost'; cancelDrag(); showCardFail();
     }
   }
@@ -774,6 +934,77 @@ function drawPastry(x, y, s, k, o = {}){
     ctx.beginPath(); ctx.arc(0, 0, 22, 0, TAU); ctx.stroke();
   }
   ctx.restore();
+}
+// Dough lump: a soft blob, one bump per layer. Fortune cookie: cracks show hits taken.
+function drawDough(x, y, e){
+  ctx.save(); ctx.translate(x, y);
+  if (e.hit) ctx.translate(Math.sin(now*70)*e.hit*3, 0);
+  if (e.squash) ctx.scale(1 + e.squash*.14, 1 - e.squash*.14);
+  ell(1, 16, 17, 4.5, 'rgba(74,44,42,.15)');
+  const n = Math.max(1, Math.min(3, e.layers));
+  const blobs = n === 1 ? [[0, 6, 18, 10]] : n === 2 ? [[0, 8, 19, 9], [0, -3, 14, 9]] : [[0, 9, 19, 8], [0, 0, 15, 8], [0, -9, 10, 7]];
+  for (const [bx, by, rx, ry] of blobs){
+    ell(bx, by + 2, rx + 1, ry + 1, '#9c6b3c');
+    ell(bx, by, rx, ry, '#e3b878');
+    ctx.strokeStyle = '#9c6b3c'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(bx, by, rx, ry, 0, 0, TAU); ctx.stroke();
+    ell(bx - rx*.35, by - ry*.35, rx*.35, ry*.28, 'rgba(255,248,230,.75)');
+  }
+  ctx.fillStyle = 'rgba(255,255,255,.8)';
+  for (const [fx, fy] of [[-8, 9], [6, 5], [10, 11], [-3, 2]]) if (fy > -12 + (3 - n)*6){ ctx.beginPath(); ctx.arc(fx, fy, 1.1, 0, TAU); ctx.fill(); }
+  ctx.restore();
+}
+// Hard crust: a baked lattice slab that fills its tile; darker and thicker with more layers.
+function drawCrust(x, y, e){
+  ctx.save(); ctx.translate(x, y);
+  if (e.hit) ctx.translate(Math.sin(now*70)*e.hit*3, 0);
+  const n = Math.max(1, Math.min(3, e.layers));
+  const base = ['#d99a55','#c2803f','#a8692f'][n-1], lat = ['#f2c78a','#e3ad68','#d09550'][n-1];
+  ctx.fillStyle = '#7a4a1e'; rr(-23, -21, 46, 45, 8); ctx.fill();
+  ctx.fillStyle = base; rr(-23, -23, 46, 44, 8); ctx.fill();
+  ctx.save(); rr(-21, -21, 42, 40, 6); ctx.clip();
+  ctx.strokeStyle = lat; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  for (let k = -3; k <= 3; k++){ ctx.beginPath(); ctx.moveTo(-26 + k*12, 24); ctx.lineTo(4 + k*12, -26); ctx.stroke(); }
+  if (n >= 2) for (let k = -3; k <= 3; k++){ ctx.beginPath(); ctx.moveTo(26 + k*12, 24); ctx.lineTo(-4 + k*12, -26); ctx.stroke(); }
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(255,240,210,.55)'; ctx.lineWidth = 1.5; rr(-21, -21, 42, 40, 6); ctx.stroke();
+  if (n >= 2){ ctx.fillStyle = '#4a2c2a'; ctx.font = FONT(11); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,250,240,.92)'; ctx.beginPath(); ctx.arc(14, -14, 7.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#4a2c2a'; ctx.fillText(String(n), 14, -13.5); }
+  ctx.restore();
+}
+function drawCookie(x, y, e){
+  ctx.save(); ctx.translate(x, y);
+  if (e.hit) ctx.translate(Math.sin(now*70)*e.hit*3, 0);
+  ell(1, 16, 16, 4.5, 'rgba(74,44,42,.15)');
+  ctx.fillStyle = '#e8a24c'; ctx.strokeStyle = '#b97a32'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(-18, 6); ctx.quadraticCurveTo(-16, -16, 0, -15); ctx.quadraticCurveTo(16, -16, 18, 6);
+  ctx.quadraticCurveTo(9, 2, 0, 12); ctx.quadraticCurveTo(-9, 2, -18, 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#f6c06a'; ctx.beginPath(); ctx.moveTo(-12, 2); ctx.quadraticCurveTo(-10, -11, 0, -11); ctx.quadraticCurveTo(4, -11, 6, -9); ctx.quadraticCurveTo(-4, -6, -12, 2); ctx.fill();
+  // paper fortune peeking out
+  ctx.fillStyle = '#fffaf4'; ctx.save(); ctx.translate(3, 9); ctx.rotate(.25); rr(-2, -2, 16, 6, 1); ctx.fill();
+  ctx.fillStyle = '#e5484d'; ctx.fillRect(2, 0, 2, 2); ctx.fillRect(7, 0, 2, 2); ctx.restore();
+  // cracks for hits taken
+  const taken = 3 - Math.max(0, e.hits);
+  ctx.strokeStyle = '#7a4a1e'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+  const cracks = [[[-6,-12],[-3,-6],[-7,-1]], [[7,-11],[4,-5],[9,0]], [[0,-14],[1,-8],[-2,-4]]];
+  for (let k = 0; k < taken && k < 3; k++){ ctx.beginPath(); cracks[k].forEach(([cx, cy], j) => j ? ctx.lineTo(cx, cy) : ctx.moveTo(cx, cy)); ctx.stroke(); }
+  // hits left
+  for (let k = 0; k < 3; k++) ell(-6 + k*6, -21, 2.2, 2.2, k < e.hits ? '#4a2c2a' : 'rgba(74,44,42,.2)');
+  ctx.restore();
+}
+function drawPins(){
+  if (!walls.size) return;
+  for (const key of walls){
+    const [r, c] = key.split(',').map(Number);
+    if (walls.has((r - 1) + ',' + c)) continue;   // draw each pin once, from its top tile
+    let len = 1; while (walls.has((r + len) + ',' + c)) len++;
+    const x = gx + (c + 1)*CELL, y0 = GRID_TOP + r*CELL + 3, y1 = GRID_TOP + (r + len)*CELL - 3;
+    ctx.fillStyle = 'rgba(74,44,42,.18)'; rr(x - 4, y0 + 3, 10, y1 - y0, 5); ctx.fill();
+    ctx.fillStyle = '#a86b3c'; rr(x - 3.5, y0 - 3, 7, 8, 3); ctx.fill(); rr(x - 3.5, y1 - 5, 7, 8, 3); ctx.fill();
+    ctx.fillStyle = '#e0aa6e'; rr(x - 5.5, y0 + 4, 11, y1 - y0 - 8, 5.5); ctx.fill();
+    ctx.strokeStyle = '#a86b3c'; ctx.lineWidth = 1.5; rr(x - 5.5, y0 + 4, 11, y1 - y0 - 8, 5.5); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; rr(x - 3.5, y0 + 7, 2.5, y1 - y0 - 14, 1.2); ctx.fill();
+  }
 }
 function drawCan(x, y, s, e){
   ctx.save(); ctx.translate(x, y);
@@ -909,37 +1140,42 @@ function miniBox(cx, cy, item, first, qs){
   ctx.restore();
 }
 function badge(x, y, kind){
-  const col = { truck:'#3fb37f', shelf:'#f6c453', soft: RACK.dark, over:'#e5484d', crack:'#9ccbe6', tnt:'#ff7eb0' }[kind];
+  const col = { truck:'#3fb37f', shelf:'#f6c453', over:'#e5484d', crack:'#9ccbe6', tnt:'#ff7eb0', dough:'#d9b38c', cookie:'#f6c453' }[kind];
   ctx.fillStyle = col; ctx.strokeStyle = '#4a2c2a'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(x, y, 8, 0, TAU); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = kind === 'shelf' ? '#4a2c2a' : '#ffffff'; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 2; ctx.lineCap = 'round';
   ctx.beginPath();
   if (kind === 'truck'){ ctx.moveTo(x-3.5, y); ctx.lineTo(x-1, y+3); ctx.lineTo(x+4, y-3); ctx.stroke(); }
-  else if (kind === 'shelf' || kind === 'soft'){ ctx.moveTo(x, y-4); ctx.lineTo(x, y+2); ctx.moveTo(x-3, y-1); ctx.lineTo(x, y+2); ctx.lineTo(x+3, y-1); ctx.moveTo(x-4, y+4.5); ctx.lineTo(x+4, y+4.5); ctx.stroke(); }
+  else if (kind === 'shelf'){ ctx.moveTo(x, y-4); ctx.lineTo(x, y+2); ctx.moveTo(x-3, y-1); ctx.lineTo(x, y+2); ctx.lineTo(x+3, y-1); ctx.moveTo(x-4, y+4.5); ctx.lineTo(x+4, y+4.5); ctx.stroke(); }
   else if (kind === 'over'){ ctx.moveTo(x, y-4); ctx.lineTo(x, y+1); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y+4, 1.2, 0, TAU); ctx.fill(); }
+  else if (kind === 'cookie'){ ctx.strokeStyle = ctx.fillStyle = '#4a2c2a'; ctx.lineWidth = 1.6; rr(x-3.5, y-4.5, 7, 9, 1.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y-2); ctx.lineTo(x, y+2); ctx.moveTo(x-2, y); ctx.lineTo(x+2, y); ctx.stroke(); }
+  else if (kind === 'dough'){ ctx.moveTo(x-4, y); ctx.lineTo(x+4, y); ctx.stroke(); }
   else if (kind === 'crack'){ ctx.moveTo(x-1, y-4); ctx.lineTo(x+2, y-1); ctx.lineTo(x-2, y+1); ctx.lineTo(x+1, y+4); ctx.stroke(); }
   else { ctx.arc(x, y, 3, 0, TAU); ctx.fill(); }
 }
-function drawRack(){
-  const o = softOpen;
-  const fullW = SOFT_CAP*SOFT + (SOFT_CAP-1)*6 + 12, w = lerp(44, fullW, o), h = lerp(5, 34, o);
-  const x = (W - w)/2, y = SOFT_Y;
+function drawCoolingRack(used){
+  const S = slotSize(), x = shelfLeft() - 10, w = rackW() + 20, y = SHELF_Y + 10, h = 44;
+  const warn = used >= capacity - 1 && state === 'play';
+  // feet and shadow
+  ctx.fillStyle = 'rgba(74,44,42,.12)'; rr(x + 6, y + h + 3, w - 12, 6, 3); ctx.fill();
   ctx.fillStyle = RACK.dark;
-  ctx.fillRect(x + 6, SHELF_Y + 60, 3, y - SHELF_Y - 60 + 2); ctx.fillRect(x + w - 9, SHELF_Y + 60, 3, y - SHELF_Y - 60 + 2);
-  ctx.strokeStyle = RACK.dark; ctx.lineWidth = 3; rr(x, y, w, h, 5); ctx.stroke();
-  if (o > .25){
-    const a = Math.min(1, (o - .25) / .6);
-    ctx.globalAlpha = a;
-    ctx.strokeStyle = RACK.bar; ctx.lineWidth = 1.5;
-    for (let k = 1; k < 6; k++){ const xx = x + k*w/6; ctx.beginPath(); ctx.moveTo(xx, y + 2); ctx.lineTo(xx, y + h - 2); ctx.stroke(); }
-    for (let k = 1; k < 3; k++){ const yy = y + k*h/3; ctx.beginPath(); ctx.moveTo(x + 2, yy); ctx.lineTo(x + w - 2, yy); ctx.stroke(); }
-    ctx.font = FONT(10); ctx.textBaseline = 'middle';
-    ctx.fillStyle = RACK.dark; ctx.textAlign = 'right'; ctx.fillText('RACK', x - 6, SOFT_CY);
-    if (soft.length){
-      ctx.textAlign = 'left'; ctx.fillStyle = Math.sin(now*8) > 0 ? '#e5484d' : RACK.dark;
-      ctx.fillText('CLEARS AT COMBO END', x + w + 6, SOFT_CY);
-    }
-    ctx.globalAlpha = 1;
+  for (const fx of [x + 14, x + w/2 - 2, x + w - 18]) rr(fx, y + h - 2, 4, 9, 2), ctx.fill();
+  // wire grid
+  ctx.save(); rr(x + 2, y + 2, w - 4, h - 4, 7); ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = RACK.bar; ctx.lineWidth = 1.5;
+  for (let xx = x + 8; xx < x + w - 2; xx += 9){ ctx.beginPath(); ctx.moveTo(xx, y); ctx.lineTo(xx, y + h); ctx.stroke(); }
+  for (let k = 1; k < 4; k++){ const yy = y + k*h/4; ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(x + w, yy); ctx.stroke(); }
+  ctx.restore();
+  // frame
+  ctx.strokeStyle = warn ? (Math.sin(now*8) > 0 ? '#e5484d' : 'rgba(229,72,77,.45)') : RACK.dark;
+  ctx.lineWidth = warn ? 4 : 3.5; rr(x, y, w, h, 9); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.2; rr(x + 3, y + 2.5, w - 6, h - 5, 7); ctx.stroke();
+  // spot rings
+  for (let i = 0; i < capacity; i++){
+    const cx = slotX(i), cy = SHELF_CY - 3;
+    ctx.strokeStyle = i < used ? 'rgba(143,132,129,.35)' : RACK.dark; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, S/2 - 4, 0, TAU); ctx.stroke();
   }
 }
 function drawTin(){
@@ -968,7 +1204,7 @@ function drawExpress(){
 function drawAimPill(pv, pred){
   if (!pv || !pred) return;
   const tapMode = aim && selected != null && !(drag && drag.moved);
-  const warn = pred.over ? 'OVERFLOW!' : pred.toSoft ? 'COOLING RACK' : '';
+  const warn = pred.over ? 'RACK FULL!' : '';
   const label = tapMode ? (warn ? warn + ' · TAP AGAIN' : 'TAP AGAIN TO DROP') : warn;
   if (!label) return;
   ctx.font = FONT(12); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -976,9 +1212,9 @@ function drawAimPill(pv, pred){
   const cx = Math.max(w/2 + 4, Math.min(W - w/2 - 4, cellX(pv.c)));
   const cy = pv.r === 0 ? cellY(pv.r) + 46 : cellY(pv.r) - 46;
   ctx.globalAlpha = .88 + .12*Math.sin(now*8);
-  ctx.fillStyle = pred.over ? '#e5484d' : pred.toSoft ? RACK.dark : '#5b3a33';
+  ctx.fillStyle = pred.over ? '#e5484d' : '#5b3a33';
   rr(cx - w/2, cy - h/2, w, h, 12); ctx.fill();
-  ctx.fillStyle = pred.over || pred.toSoft ? '#ffffff' : '#f6c453'; ctx.fillText(label, cx, cy + 1);
+  ctx.fillStyle = pred.over ? '#ffffff' : '#f6c453'; ctx.fillText(label, cx, cy + 1);
   ctx.globalAlpha = 1;
 }
 function render(){
@@ -1016,25 +1252,10 @@ function render(){
   if (!queue.length){ ctx.fillText('LAST BOXES', 52, QUEUE_CY + 1); }
   const used = shelf.length;
   ctx.textAlign = 'right'; ctx.fillStyle = used >= capacity ? '#e5484d' : '#9a7a70';
-  ctx.fillText(`SHELF ${used}/${capacity}`, W - 10, QUEUE_CY + 1);
+  ctx.fillText(`RACK ${used}/${capacity}`, W - 10, QUEUE_CY + 1);
 
-  // display shelf with plates
-  const SL = slotSize(), total = capacity*SL + (capacity-1)*6, bx = shelfLeft() - 8;
-  ctx.fillStyle = '#ecd2c7'; rr(bx, SHELF_Y, total + 16, 60, 12); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.45)'; rr(bx + 4, SHELF_Y + 3, total + 8, 6, 3); ctx.fill();
-  if (used >= capacity - 1 && state === 'play'){
-    ctx.strokeStyle = Math.sin(now*8) > 0 ? '#e5484d' : 'rgba(229,72,77,.3)'; ctx.lineWidth = 3;
-    rr(bx, SHELF_Y, total + 16, 60, 12); ctx.stroke();
-  }
-  for (let i = 0; i < capacity; i++){
-    const x = slotX(i);
-    ell(x, SHELF_CY + 10, SL/2, SL*.2, '#d9bcb0');
-    ell(x, SHELF_CY + 8, SL/2 - 1, SL*.19, '#fffaf4');
-    ell(x, SHELF_CY + 8, SL/2 - 7, SL*.11, '#f3e6e0');
-  }
-  stripes(bx + 10, SHELF_Y + 56, total - 4, 4, '#ff7eb0', '#fff3ea');
-
-  drawRack();
+  // cooling rack: a wire rack on little feet, one ring per spot
+  drawCoolingRack(used);
   if (stashShow > .02) drawTin();
 
   // baking tray
@@ -1057,14 +1278,19 @@ function render(){
     ctx.strokeStyle = '#5b3a33'; ctx.lineWidth = 2.5; ctx.setLineDash([5,4]);
     rr(gx + pv.c*CELL + 2, GRID_TOP + pv.r*CELL + 2, CELL-4, CELL-4, 8); ctx.stroke(); ctx.setLineDash([]);
   }
-  ctx.save(); ctx.beginPath(); ctx.rect(gx-7, -200, cols*CELL + 14, GRID_TOP + rows*CELL + 207); ctx.clip();
+  // new pastries appear from the tray's top edge
+  ctx.save(); ctx.beginPath(); ctx.rect(gx-7, GRID_TOP-7, cols*CELL + 14, rows*CELL + 14); ctx.clip();
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++){
     const e = grid[r][c]; if (!e) continue;
-    if (e.y < GRID_TOP - 30) continue;
+    if (e.y < GRID_TOP - 60) continue;
     if (e.kind === 'tnt') drawCan(e.x, e.y, 44, e);
+    else if (e.kind === 'dough') drawDough(e.x, e.y, e);
+    else if (e.kind === 'crust') drawCrust(e.x, e.y, e);
+    else if (e.kind === 'cookie') drawCookie(e.x, e.y, e);
     else drawPastry(e.x, e.y, 42, e.color, { chain: e.chain, squash: e.squash, hit: e.hit });
   }
   ctx.restore();
+  drawPins();
   if (pred) for (const m of pred.marks) badge(cellX(m.c) + 15, cellY(m.r) - 15, m.k);
 
   // the cat's moves
@@ -1087,7 +1313,6 @@ function render(){
 
   // pastries resting on shelf and rack
   for (const it of shelf) if (it.landed) drawPastry(it.px, it.py, it.s, it.color);
-  for (const it of soft) if (it.landed) drawPastry(it.px, it.py, it.s, it.color);
   stash.slice(0, 4).forEach(it => { if (it.landed) drawPastry(it.px, it.py, it.s, it.color, { flat:true }); });
   if (stash.length > 4 && stashShow > .5){
     const p = stashPos(3); ctx.fillStyle = '#4a2c2a'; ctx.beginPath(); ctx.arc(p.x + 10, p.y + 9, 8, 0, TAU); ctx.fill();
@@ -1135,6 +1360,7 @@ function render(){
 }
 function previewTarget(){
   if (state !== 'play') return null;
+  if (hintPv && !drag && selected == null) return hintPv;
   if (drag && drag.moved){
     if (!hover || !hand[drag.i]) return null;
     return { type: hand[drag.i].type, r: hover.r, c: hover.c };
@@ -1161,8 +1387,8 @@ canvas.addEventListener('pointerdown', ev => {
   if (selected != null && hand[selected]){
     if (!cell) return;
     if (!tutAllows(cell)){ toast('Tap the glowing tile.'); return; }
-    if (tut && tut.step === 1){ useCard(selected, cell); return; }
-    if (ev.pointerType === 'mouse' && !(tut && tut.step === 2)){ useCard(selected, cell); return; }
+    // In the tutorial every move aims first, so the preview is seen before the drop.
+    if (ev.pointerType === 'mouse' && !(tut && tut.step <= 2)){ useCard(selected, cell); return; }
     if (aim && aim.r === cell.r && aim.c === cell.c){ useCard(selected, cell); return; }
     aim = cell; aimPointer = ev.pointerId; buzz(6);
     try { canvas.setPointerCapture(ev.pointerId); } catch(e){}
@@ -1219,15 +1445,16 @@ document.addEventListener('pointermove', ev => {
 function endDrag(){
   if (!drag) return;
   if (drag.moved){
-    if (hover && state === 'play' && tutAllows(hover) && !(tut && tut.step === 2)) useCard(drag.i, hover);
-    else if (hover && tut && tut.step === 2 && tutAllows(hover)){ selected = drag.i; aim = hover; }
+    // one motion: the preview showed while dragging, so letting go drops the card
+    if (hover && state === 'play' && tutAllows(hover)) useCard(drag.i, hover);
+    else if (hover && state === 'play' && tut) toast(tut.step === 2 ? 'Drop it on the glowing row.' : 'Drop it on the glowing tile.');
     cancelDrag();
   } else {
     if (state === 'play'){
       if (selected === drag.i){ selected = null; aim = null; }
       else {
         selected = drag.i;
-        if (!tut && !toastShown.sel){ toastShown.sel = true; toast(coarse ? 'Tap the tray to aim, tap again to drop' : 'Click the tray to drop'); }
+        if (!tut && !toastShown.sel){ toastShown.sel = true; toast(coarse ? 'Tip: drag cards straight onto the tray. Or tap the tray to aim, then tap again.' : 'Tip: drag cards onto the tray, or click a tile.'); }
       }
       buzz(6);
     }
@@ -1265,10 +1492,48 @@ function patHTML(type){
   return `<span class="pat" aria-hidden="true">${s}</span>`;
 }
 function renderDeck(){
+  if (modeB){
+    deckEl.style.opacity = '';
+    deckEl.innerHTML = '<b>∞</b><small>ENDLESS</small>';
+    deckEl.setAttribute('aria-label', 'Endless cards');
+    deckEl.title = 'Mode B: a new tray of 3 cards arrives when you use them all';
+    return;
+  }
   deckEl.innerHTML = `<b>${draw.length}</b><small>DECK</small>`;
+  deckEl.style.opacity = draw.length ? '' : '.55';
   deckEl.setAttribute('aria-label', `${draw.length} cards in deck`);
   deckEl.title = 'Gift boxes add a card to the deck when they leave full';
 }
+// Top bar: cards left (the move budget) and boxes left (the goal).
+const movesEl = document.getElementById('movesN'), boxesEl = document.getElementById('boxesN');
+const sMoves = document.getElementById('sMoves'), sBoxes = document.getElementById('sBoxes');
+let statKey = '';
+function renderStats(){
+  const moves = modeB ? '∞' : String(hand.length + draw.length), boxes = String(boxesLeft());
+  const key = moves + '/' + boxes + '/' + state;
+  if (key === statKey) return;
+  const prev = statKey.split('/');
+  statKey = key;
+  movesEl.textContent = moves; boxesEl.textContent = boxes;
+  sMoves.setAttribute('aria-label', modeB ? 'Endless cards' : `${moves} cards left`);
+  sBoxes.setAttribute('aria-label', `${boxes} boxes left`);
+  sMoves.classList.toggle('low', !modeB && !tut && +moves <= 2 && +moves > 0 && state === 'play');
+  if (prev[0] !== undefined && +moves > +prev[0]){ sMoves.classList.remove('bump'); void sMoves.offsetWidth; sMoves.classList.add('bump'); }
+  if (prev[1] !== undefined && boxes !== prev[1]){ sBoxes.classList.remove('bump'); void sBoxes.offsetWidth; sBoxes.classList.add('bump'); }
+}
+const modeEl = document.getElementById('mode');
+function renderMode(){
+  modeEl.textContent = mode;
+  modeEl.classList.toggle('b', mode === 'B');
+  modeEl.setAttribute('aria-label', mode === 'B' ? 'Prototype mode B, endless cards. Switch to mode A' : 'Prototype mode A, limited cards. Switch to mode B');
+}
+modeEl.addEventListener('click', () => {
+  mode = mode === 'A' ? 'B' : 'A';
+  try { localStorage.setItem('pawtisserie.mode', mode); } catch(e){}
+  renderMode(); cancelDrag();
+  if (L && L.tutorial) toast(mode === 'B' ? 'Mode B starts from level 1: endless cards, only a full cooling rack can fail you.' : 'Mode A: limited cards.');
+  else { loadLevel(levelIdx); toast(mode === 'B' ? 'Mode B: endless cards. Only a full cooling rack can fail you.' : 'Mode A: limited cards. Run out and the level is over.'); }
+});
 function renderHand(){
   if (!hand || (drag && drag.moved)) return;
   const play = state === 'play';
@@ -1329,11 +1594,11 @@ function shuffleHand(){
   renderHand();
   return true;
 }
-// Stash moves every pastry on the plates into the tin. Tin pastries jump into
+// Stash moves every pastry on the cooling rack into the tin. Tin pastries jump into
 // a matching box before anything else, and the tin never makes you fail.
 function stashPlates(){
   const take = shelf.filter(it => it.landed);
-  if (!take.length){ toast('Nothing on the plates to stash yet.'); return false; }
+  if (!take.length){ toast('Nothing on the cooling rack to stash yet.'); return false; }
   shelf = shelf.filter(it => !it.landed);
   for (const it of take){
     stash.push(it); it.landed = false;
@@ -1342,11 +1607,11 @@ function stashPlates(){
   texts.push({ x: W - 36, y: SHELF_Y - 6, text:'STASHED', t:0, life:.9, color:'#9fd3c7' });
   return true;
 }
-// Swap in the box the plates need most: an empty box at the counter goes back
+// Swap in the box the cooling rack needs most: an empty box at the counter goes back
 // to the queue, otherwise the called box becomes the next one in line.
 function callTruck(){
   const counts = {};
-  for (const it of [...stash, ...shelf, ...soft]) counts[it.color] = (counts[it.color] || 0) + 1;
+  for (const it of [...stash, ...shelf]) counts[it.color] = (counts[it.color] || 0) + 1;
   const served = new Set(lanes.filter(d => d && d.state === 'ready' && d.reserved < 3).map(d => d.color));
   const want = Object.keys(counts).map(Number).filter(c => !served.has(c) && queue.some(q => q.color === c)).sort((a, b) => counts[b] - counts[a]);
   if (!want.length){ toast(counts && Object.keys(counts).length ? 'Boxes for your waiting pastries are already here.' : 'Nothing is waiting for a box yet.'); return false; }
@@ -1382,13 +1647,16 @@ function toast(msg){
   const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
 }
-function showPanel(title, body, buttons){
+function showPanel(title, body, buttons, opts = {}){
   document.getElementById('ptitle').textContent = title;
   document.getElementById('pbody').textContent = body;
   const box = document.getElementById('pbtns'); box.innerHTML = '';
+  box.classList.toggle('lvgrid', !!opts.grid);
   buttons.forEach(b => {
     const el = document.createElement('button');
-    el.type = 'button'; el.className = 'btn' + (b.primary ? ' primary' : '');
+    el.type = 'button'; el.className = 'btn' + (b.primary ? ' primary' : '') + (b.cls ? ' ' + b.cls : '');
+    if (b.wide) el.style.gridColumn = '1 / -1';
+    if (b.aria) el.setAttribute('aria-label', b.aria);
     el.textContent = b.label;
     if (b.ad){ const s = document.createElement('span'); s.className = 'ad'; s.textContent = 'AD'; el.appendChild(s); }
     el.onclick = b.onClick; box.appendChild(el);
@@ -1400,43 +1668,51 @@ function hidePanel(){ document.getElementById('panel').hidden = true; }
 function showWin(){
   const last = levelIdx === LEVELS.length - 1;
   const left = hand.length + draw.length;
+  markCleared(levelIdx);
   if (tut){
-    showPanel('Tutorial done!', 'Pastries without a box wait on the plates. Keep the plates from overflowing, and use each move where it sends the most pastries home.',
+    showPanel('Tutorial done!', 'Cards are your moves, so make each one count. Pastries without a box wait on the cooling rack; keep it from overflowing.',
       [{ label:'Start level 1', primary:true, onClick: () => loadLevel(1) }]);
     return;
   }
   showPanel('Orders boxed!',
-    last ? `All test levels done, with ${left} cards to spare. Replay them and try different moves.`
-         : `${left} cards left over (in the real game, these could become stars or coins). Next level adds ${levelIdx === 1 ? 'a fourth pastry, cream cans and glass cloches' : 'a bigger tray and more cloches'}.`,
+    (modeB ? 'All boxes filled. ' : `${left} card${left === 1 ? '' : 's'} left over (in the real game, these could become stars or coins). `)
+    + (last ? 'That was the boss, and the last test level! Replay any level from the level pill, or switch mode with the A/B button.'
+            : `Up next: level ${levelIdx + 1}${LEVELS[levelIdx + 1].boss ? ', the boss' : ''}.`),
     [{ label: last ? 'Play from level 1' : 'Next level', primary:true, onClick: () => loadLevel(last ? 1 : levelIdx + 1) }]);
 }
-function showSpaceFail(fromSoft){
-  showPanel('Shelf overflow',
-    fromSoft ? 'The combo ended with pastries still on the cooling rack. It only holds pastries while moves and boxes are in motion.'
-             : 'A pastry had nowhere to land, not even on the cooling rack.',
-    [{ label:'Express box', ad:true, primary:true, onClick: reviveExpress },
+// Revives: one ad fixes everything that is wrong at that moment. A full rack with no cards left gets the
+// express box and 2 FLOP cards together, and so does running out of cards with a nearly full rack.
+const outOfCards = () => !modeB && hand.length + draw.length === 0;
+const rackHeavy = () => shelf.length >= capacity - 2;
+function giveReviveCards(){ hand.push(card('box'), card('box')); state = 'play'; hidePanel(); renderHand(); }
+function showSpaceFail(){
+  const both = outOfCards();
+  showPanel('The rack is full',
+    'A pastry had nowhere to land: all 7 spots on the cooling rack were taken.' + (both ? ' And your hand is empty too.' : ''),
+    [{ label: both ? 'Express box + 2 FLOP' : 'Express box', ad:true, primary:true, onClick: () => { reviveExpress(); if (both) giveReviveCards(); } },
      { label:'Retry level', onClick: () => loadLevel(levelIdx) }]);
 }
 function toExpress(color, x, y, s){
   launch(color, x, y, s, { kind:'express', k: express.want }, rand(.38,.5), 40);
   express.want++;
 }
-// Revive: an express box pulls up over the plates and takes every pastry on the plates, the rack and the floor.
+// Revive: an express box pulls up over the cooling rack and takes every pastry on it and on the floor.
 function reviveExpress(){
   hidePanel();
   express = { x: -90, tx: W/2, y: SHELF_CY, t: 0, state:'in', want: 0, got: 0, bounce: 0, sp: 0 };
-  const take = [...shelf.filter(it => it.landed), ...soft.filter(it => it.landed), ...overflow.filter(o => o.landed).map(o => ({ color:o.color, px:o.px, py:o.py, s:30 }))];
-  shelf = shelf.filter(it => !it.landed); soft = soft.filter(it => !it.landed); overflow = [];
+  const take = [...shelf.filter(it => it.landed), ...overflow.filter(o => o.landed).map(o => ({ color:o.color, px:o.px, py:o.py, s:30 }))];
+  shelf = shelf.filter(it => !it.landed); overflow = [];
   take.forEach((it, k) => schedule(.25 + k*.05, () => toExpress(it.color, it.px, it.py, it.s || 30)));
   express.expect = take.length;
-  reconcileBoxes();
   overflowShown = false; state = 'play';
   texts.push({ x: W/2, y: SHELF_Y - 8, text:'EXPRESS BOX!', t:0, life:1.1, color:'#f6c453' });
   renderHand();
 }
 function showCardFail(){
-  showPanel('Butter is out of moves', 'Pastries are left but your hand is empty.', [
-    { label:'+2 FLOP cards', ad:true, primary:true, onClick: () => { hand.push(card('box'), card('box')); state = 'play'; hidePanel(); renderHand(); } },
+  const n = boxesLeft();
+  const both = rackHeavy() || overflow.length > 0;
+  showPanel('Butter is out of cards', `${n} box${n === 1 ? '' : 'es'} still to fill, and your hand is empty.` + (both ? ' The rack is nearly full too.' : ''), [
+    { label: both ? '+2 FLOP + express box' : '+2 FLOP cards', ad:true, primary:true, onClick: () => { if (both) reviveExpress(); giveReviveCards(); } },
     { label:'Retry level', onClick: () => loadLevel(levelIdx) },
   ]);
 }
@@ -1445,16 +1721,15 @@ function showCardFail(){
 function layout(){
   const w = stage.clientWidth || W, h = stage.clientHeight || 632, r = rows || 7;
   const coachRoom = L && L.tutorial ? 78 : 0;
-  const need = 94 + 34 + 60 + 38 + 4*6 + 6 + r*CELL + 10 + coachRoom;
+  const need = 94 + 34 + 60 + 3*6 + 6 + r*CELL + 10 + coachRoom;
   let s = w / W, extra = h / s - need;
   if (extra < 0){ s = h / need; extra = 0; }
   extra = Math.min(extra, 150);
   QH = 34 + Math.min(extra*.3, 16);
-  const gap = 6 + (extra - (QH - 34)) / 4;
+  const gap = 6 + (extra - (QH - 34)) / 3;
   let y = 94 + gap;
   QUEUE_CY = y + QH/2; y += QH + gap;
   SHELF_Y = y; SHELF_CY = y + 30; y += 60 + gap;
-  SOFT_Y = y; SOFT_CY = y + 17; y += 38 + gap;
   GRID_TOP = y + 6; H = GRID_TOP + r*CELL + 10 + coachRoom;
   scale = s; ox = (w - W*s)/2; oy = Math.max(0, (h - H*s)/2);
 }
@@ -1470,17 +1745,23 @@ function tutorialUI(){
   if (tut && state === 'play'){
     const busy = !settled || tut.pending;
     const want = tutCard(), wi = want ? hand.findIndex(h => h.type === want) : -1;
+    const dragging = drag && drag.moved, onTarget = dragging && hover && tutAllows(hover);
     if (tut.step === 1){
-      if (busy) text = 'Each box wants <b>3 matching pastries</b>. Watch them fly home!';
-      else if (selected == null){ text = 'Boxes wait for <b>3 matching pastries</b>. Tap the <b>TAP</b> card to pick up Butter\u2019s paw.'; target = 'card'; }
-      else { text = 'Now tap the glowing tile. The paw hits it and the 4 tiles around it.'; target = [1,1]; }
+      if (busy) text = 'Donuts fly into their boxes, and <b>new pastries drop in</b> from the top.';
+      else if (onTarget) text = 'Each <b>green tick</b> is a donut that lands in a box. <b>Let go</b> to drop!';
+      else if (dragging) text = 'Bring it to the <b>glowing tile</b>.';
+      else if (selected == null){ text = 'Boxes wait for <b>3 matching pastries</b>, and you have <b>3 cards</b>. <b>Drag</b> the TAP card onto the glowing tile.'; target = 'card'; }
+      else if (!aim){ text = 'Tap the glowing tile to aim Butter\u2019s paw.'; target = [1,1]; }
+      else { text = 'Each <b>green tick</b> is a donut that lands in a box. <b>Tap again</b> to drop!'; target = [aim.r, aim.c]; }
     } else if (tut.step === 2){
-      if (busy) text = 'Nice! Pastries with no box yet would wait on the plates.';
-      else if (selected == null){ text = '<b>SWIPE</b> hits a whole row. Pick the SWIPE card.'; target = 'card'; }
+      if (busy) text = 'Nice! Pastries with no box, like the cupcakes, would wait on the cooling rack.';
+      else if (onTarget) text = 'Three ticks: the macaron box fills. <b>Let go</b> to drop!';
+      else if (dragging) text = 'Bring it to the <b>glowing row</b>.';
+      else if (selected == null){ text = '<b>SWIPE</b> hits a whole row. Drag it onto the glowing row.'; target = 'card'; }
       else if (!aim){ text = 'Tap a tile in the glowing row to aim.'; target = [1,1]; }
-      else { text = 'Green ticks go straight into a box. <b>Tap the same tile again</b> to drop.'; target = [aim.r, aim.c]; }
+      else { text = 'Three ticks: the macaron box fills. <b>Tap the same tile again</b> to drop.'; target = [aim.r, aim.c]; }
     } else {
-      text = busy ? 'Almost there\u2026' : 'Finish the last orders on your own!';
+      text = busy ? 'Almost there\u2026' : '<b>Last card!</b> One donut box needs 1 more. Find the donut row.';
     }
     if (target === 'card'){
       const el = tray.querySelector(`.bcard[data-i="${wi}"]`);
@@ -1496,12 +1777,84 @@ function tutorialUI(){
   if (target){ fingerEl.hidden = false; fingerEl.style.left = target.x + 'px'; fingerEl.style.top = target.y + 'px'; }
   else fingerEl.hidden = true;
 }
+// ---------- drag hint ----------
+// A see-through copy of a hand card slides onto the board with the finger, rests while the board
+// shows that move's preview, then fades: one motion, the way the game is meant to be played.
+// Always on in the tutorial's drag steps; in levels it appears after the player sits idle.
+let hint = null, hintPv = null, lastInput = 0;
+const HINT = { press:.35, move:.95, hold:.75, fade:.3, rest:.55 };
+const HINT_PERIOD = HINT.press + HINT.move + HINT.hold + HINT.fade + HINT.rest;
+document.addEventListener('pointerdown', () => { lastInput = now; }, true);
+document.addEventListener('keydown', () => { lastInput = now; }, true);
+function bestMove(){
+  let best = null;
+  const seen = new Set();
+  hand.forEach((cd, i) => {
+    if (seen.has(cd.type)) return; seen.add(cd.type);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++){
+      const p = predict(cd.type, r, c);
+      const sc = 3*p.toTruck - p.toShelf - 60*p.over + .4*p.dough + .4*p.crust + 4*p.cookies + (cd.type === 'pop' ? .2 : 0) - (r === rows - 1 ? 0 : .01*(rows - r));
+      if (!best || sc > best.sc) best = { i, type: cd.type, r, c, sc };
+    }
+  });
+  return best;
+}
+function hintWanted(){
+  if (state !== 'play' || drag || selected != null || !settled || !document.getElementById('panel').hidden) return null;
+  if (tut){
+    if (tut.pending || tut.step > 2) return null;
+    const want = tutCard(), i = hand.findIndex(h => h.type === want);
+    return i < 0 ? null : { i, type: want, r: 1, c: 1 };
+  }
+  const delay = levelIdx <= 2 ? 4 : 9;   // seconds idle before a hint
+  return now - lastInput >= delay ? 'best' : null;
+}
+function clearHint(){
+  if (hint && hint.g) hint.g.remove();
+  hint = null; hintPv = null; fingerEl.classList.remove('drag');
+}
+function hintUI(){
+  const w = hintWanted();
+  if (!w){ if (hint) clearHint(); return false; }
+  if (!hint || (w !== 'best' && (hint.i !== w.i || hint.r !== w.r || hint.c !== w.c))){
+    clearHint();
+    const mv = w === 'best' ? bestMove() : w;
+    const src = mv && tray.querySelector(`.bcard[data-i="${mv.i}"]`);
+    if (!src) return false;
+    const g = src.cloneNode(true);
+    g.classList.remove('new','sel','glow','lifted'); g.classList.add('hintcard'); g.removeAttribute('data-i'); g.disabled = true;
+    g.setAttribute('aria-hidden', 'true'); g.tabIndex = -1;
+    document.body.appendChild(g);
+    hint = { ...mv, t0: now, g };
+  }
+  const src = tray.querySelector(`.bcard[data-i="${hint.i}"]`);
+  if (!src){ clearHint(); return false; }
+  const b = src.getBoundingClientRect(), from = { x: b.left + b.width/2, y: b.top + b.height/2 };
+  const to = tileScreen(hint.r, hint.c), sc = Math.max(.5, Math.min(.75, CELL*scale*1.15/94));
+  let t = (now - hint.t0) % HINT_PERIOD, x, y, s, a;
+  hintPv = null;
+  if (t < HINT.press){ const k = t / HINT.press; x = from.x; y = from.y - 10*k; s = 1 - .05*k; a = .85*k; }
+  else if ((t -= HINT.press) < HINT.move){
+    const k = ease(t / HINT.move);
+    x = lerp(from.x, to.x, k); y = lerp(from.y - 10, to.y, k) - 50*Math.sin(Math.PI*k); s = lerp(.95, sc, k); a = .85;
+  } else if ((t -= HINT.move) < HINT.hold){ x = to.x; y = to.y; s = sc; a = .85; hintPv = { type: hint.type, r: hint.r, c: hint.c }; }
+  else if ((t -= HINT.hold) < HINT.fade){ const k = t / HINT.fade; x = to.x; y = to.y; s = sc; a = .85*(1 - k); hintPv = { type: hint.type, r: hint.r, c: hint.c }; }
+  else { x = to.x; y = to.y; s = sc; a = 0; }
+  const g = hint.g;
+  g.style.left = (x - 34) + 'px'; g.style.top = (y - 47) + 'px';
+  g.style.transform = `rotate(${-6*(s < .9 ? 1 : 0)}deg) scale(${s.toFixed(3)})`; g.style.opacity = a.toFixed(3);
+  fingerEl.classList.add('drag');
+  fingerEl.hidden = a < .05;
+  fingerEl.style.left = (x + 4) + 'px'; fingerEl.style.top = (y + 8) + 'px';
+  return true;
+}
 function resize(){
   const w = stage.clientWidth, h = stage.clientHeight;
   dpr = Math.min(window.devicePixelRatio || 1, 3);
   canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);
   layout();
 }
+renderMode();
 loadLevel(0);
 new ResizeObserver(resize).observe(stage);
 new ResizeObserver(layoutHand).observe(tray);
@@ -1509,7 +1862,7 @@ resize();
 let last = performance.now();
 function frame(t){
   const dt = Math.min(.033, (t - last)/1000); last = t;
-  update(dt); render(); tutorialUI();
+  update(dt); render(); tutorialUI(); hintUI(); renderStats();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
